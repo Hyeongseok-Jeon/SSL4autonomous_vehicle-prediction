@@ -20,6 +20,8 @@ import torch
 from torch.utils.data import DataLoader
 from data import ArgoDataset as Dataset, from_numpy, ref_copy, collate_fn
 from utils import Logger, load_pretrain, gpu
+import warnings
+warnings.filterwarnings("ignore")
 
 os.umask(0)
 
@@ -54,7 +56,7 @@ def main():
 
 
     val(config)
-    test(config)
+    # test(config)
     train(config)
 
 
@@ -88,6 +90,10 @@ def train(config):
                 "gt_preds",
                 "has_preds",
                 "graph",
+                'gt_hists',
+                'file_name',
+                'ref_path',
+                'ego_aug',
             ]:
                 store[key] = to_numpy(data[key][j])
                 if key in ["graph"]:
@@ -142,6 +148,10 @@ def val(config):
                 "gt_preds",
                 "has_preds",
                 "graph",
+                'gt_hists',
+                'file_name',
+                'ref_path',
+                'ego_aug',
             ]:
                 store[key] = to_numpy(data[key][j])
                 if key in ["graph"]:
@@ -191,6 +201,10 @@ def test(config):
                 "theta",
                 "rot",
                 "graph",
+                'gt_hists',
+                'file_name',
+                'ref_path',
+                'ego_aug',
             ]:
                 store[key] = to_numpy(data[key][j])
                 if key in ["graph"]:
