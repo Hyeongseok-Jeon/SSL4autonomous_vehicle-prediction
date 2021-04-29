@@ -21,8 +21,8 @@ from numpy import float64, ndarray
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 
-file_path = os.path.abspath(__file__)
-# file_path = os.getcwd() + '/LaneGCN/lanegcn.py'
+# file_path = os.path.abspath(__file__)
+file_path = os.getcwd() + '/LaneGCN/lanegcn.py'
 root_path = os.path.dirname(file_path)
 model_name = os.path.basename(file_path).split(".")[0]
 

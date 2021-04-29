@@ -94,6 +94,8 @@ def train(config):
                 'file_name',
                 'ref_path',
                 'ego_aug',
+                'action',
+                'ego_maneuver',
             ]:
                 store[key] = to_numpy(data[key][j])
                 if key in ["graph"]:
@@ -152,6 +154,8 @@ def val(config):
                 'file_name',
                 'ref_path',
                 'ego_aug',
+                'action',
+                'ego_maneuver',
             ]:
                 store[key] = to_numpy(data[key][j])
                 if key in ["graph"]:
@@ -205,6 +209,8 @@ def test(config):
                 'file_name',
                 'ref_path',
                 'ego_aug',
+                'action',
+                'ego_maneuver',
             ]:
                 store[key] = to_numpy(data[key][j])
                 if key in ["graph"]:
