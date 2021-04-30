@@ -418,106 +418,105 @@ class ArgoDataset(Dataset):
         ego_aug['traj'] = traj_aug[:, 1:, :]
         data['ego_aug'] = ego_aug
         return data
+    #
+    # def get_reaction_maneuver_class(self, data):
+    #     sur_hists = data['gt_hists']
+    #     sur_futs = data['gt_preds']
+    #
+    #     i = 0
+    #     hist_traj = sur_hists[i]
+    #     path_cands = self.am.get_candidate_centerlines_for_traj(hist_traj, data['city'], viz=True)
+    #
+    #     seg_lists = []
+    #     for j in range(len(path_cands[1])):
+    #         seg_lists = seg_lists + path_cands[1][j]
+    #     seg_lists = list(dict.fromkeys(seg_lists))
+    #
+    #     closest_lane_obj, conf, dense_centerline, nearby_lane_ids, per_lane_dists = self.am.get_nearest_centerline(hist_traj[0], data['city'], visualize=True)
+    #     lane_scores = sorted(per_lane_dists)
+    #     for j in range(len(lane_scores)):
+    #         idx = np.where(per_lane_dists == lane_scores[j])[0][0]
+    #         lane_id = nearby_lane_ids[idx]
+    #         if lane_id in seg_lists:
+    #             break
+    #     ego_start_lane_obj = self.am.city_lane_centerlines_dict[data['city']][lane_id]
+    #
+    #     fut_traj = sur_futs[i]
+    #     path_cands = self.am.get_candidate_centerlines_for_traj(fut_traj, data['city'], viz=True)
+    #
+    #     seg_lists = []
+    #     for j in range(len(path_cands[1])):
+    #         seg_lists = seg_lists + path_cands[1][j]
+    #     seg_lists = list(dict.fromkeys(seg_lists))
+    #
+    #     closest_lane_obj, conf, dense_centerline, nearby_lane_ids, per_lane_dists = self.am.get_nearest_centerline(fut_traj[-1], data['city'], visualize=True)
+    #     lane_scores = sorted(per_lane_dists)
+    #     for j in range(len(lane_scores)):
+    #         idx = np.where(per_lane_dists == lane_scores[j])[0][0]
+    #         lane_id = nearby_lane_ids[idx]
+    #         if lane_id in seg_lists:
+    #             break
+    #     ego_fut_lane_obj = self.am.city_lane_centerlines_dict[data['city']][lane_id]
+    #
+    #     if ego_start_lane_obj.turn_direction == 'NONE':
+    #         connected_ids = self.am.dfs(ego_start_lane_obj.id, data['city'])
+    #         seg_seq = 0
+    #         for j in range(len(connected_ids)):
+    #             if ego_fut_lane_obj.id in connected_ids[j]:
+    #                 seg_seq = connected_ids[j]
+    #                 break
+    #         if seg_seq != 0:
+    #             init_idx = seg_seq.index(ego_start_lane_obj.id)
+    #             end_idx = seg_seq.index(ego_fut_lane_obj.id)
+    #             maneuver = 'go_straight'
+    #             for k in range(init_idx+1, end_idx+1):
+    #                 if self.am.city_lane_centerlines_dict[data['city']][seg_seq[k]].turn_direction != 'NONE':
+    #                     maneuver = self.am.city_lane_centerlines_dict[data['city']][seg_seq[k]].turn_direction
+    #         else:
+    #             init_left_id, init_right_id = ego_start_lane_obj.l_neighbor_id, ego_start_lane_obj.r_neighbor_id
+    #             left_connected_ids = self.am.dfs(init_left_id, data['city'])
+    #             right_connected_ids = self.am.dfs(init_right_id, data['city'])
+    #             seg_seq = 0
+    #             for j in range(len(left_connected_ids)):
+    #                 if ego_fut_lane_obj.id in left_connected_ids[j]:
+    #                     seg_seq = left_connected_ids[j]
+    #                     break
+    #             if seg_seq == 0:
+    #                 for j in range(len(right_connected_ids)):
+    #                     if ego_fut_lane_obj.id in right_connected_ids[j]:
+    #                         seg_seq = right_connected_ids[j]
+    #                         break
+    #                 if seg_seq == 0:
+    #                     maneuver = 'not_defined'
+    #                 else:
+    #                     maneuver = 'right_lane_change'
+    #             else:
+    #                 maneuver = 'left_lane_change'
+    #     else:
+    #         maneuver = ego_start_lane_obj.turn_direction
+    #     data['ego_maneuver'] = maneuver
+    #
+    #     for iz in range(sur_hists.shape[0]-1):
+    #         i = iz + 1
+    #         hist_traj = sur_hists[i]
+    #         path_cands = self.am.get_candidate_centerlines_for_traj(hist_traj, data['city'], viz=True)
+    #
+    #         seg_lists = []
+    #         for j in range(len(path_cands[1])):
+    #             seg_lists = seg_lists + path_cands[1][j]
+    #         seg_lists = list(dict.fromkeys(seg_lists))
+    #
+    #         closest_lane_obj, conf, dense_centerline, nearby_lane_ids, per_lane_dists = self.am.get_nearest_centerline(hist_traj[-1], data['city'], visualize=True)
+    #         lane_scores = sorted(per_lane_dists)
+    #         for j in range(len(lane_scores)):
+    #             idx = np.where(per_lane_dists == lane_scores[j])[0][0]
+    #             lane_id = nearby_lane_ids[idx]
+    #             if lane_id in seg_lists:
+    #                 break
+    #         sur_cur_lane_obj = self.am.city_lane_centerlines_dict[data['city']][lane_id]
+    #
+    #     return data
 
-    def get_reaction_maneuver_class(self, data):
-        sur_hists = data['gt_hists']
-        sur_futs = data['gt_preds']
-
-        i = 0
-        hist_traj = sur_hists[i]
-        path_cands = self.am.get_candidate_centerlines_for_traj(hist_traj, data['city'], viz=True)
-
-        seg_lists = []
-        for j in range(len(path_cands[1])):
-            seg_lists = seg_lists + path_cands[1][j]
-        seg_lists = list(dict.fromkeys(seg_lists))
-
-        closest_lane_obj, conf, dense_centerline, nearby_lane_ids, per_lane_dists = self.am.get_nearest_centerline(hist_traj[0], data['city'], visualize=True)
-        lane_scores = sorted(per_lane_dists)
-        for j in range(len(lane_scores)):
-            idx = np.where(per_lane_dists == lane_scores[j])[0][0]
-            lane_id = nearby_lane_ids[idx]
-            if lane_id in seg_lists:
-                break
-        ego_start_lane_obj = self.am.city_lane_centerlines_dict[data['city']][lane_id]
-
-        fut_traj = sur_futs[i]
-        path_cands = self.am.get_candidate_centerlines_for_traj(fut_traj, data['city'], viz=True)
-
-        seg_lists = []
-        for j in range(len(path_cands[1])):
-            seg_lists = seg_lists + path_cands[1][j]
-        seg_lists = list(dict.fromkeys(seg_lists))
-
-        closest_lane_obj, conf, dense_centerline, nearby_lane_ids, per_lane_dists = am.get_nearest_centerline(fut_traj[-1], data['city'], visualize=True)
-        lane_scores = sorted(per_lane_dists)
-        for j in range(len(lane_scores)):
-            idx = np.where(per_lane_dists == lane_scores[j])[0][0]
-            lane_id = nearby_lane_ids[idx]
-            if lane_id in seg_lists:
-                break
-        ego_fut_lane_obj = self.am.city_lane_centerlines_dict[data['city']][lane_id]
-
-        if ego_start_lane_obj.turn_direction == 'NONE':
-            connected_ids = self.am.dfs(ego_start_lane_obj.id, data['city'])
-            seg_seq = 0
-            for j in range(len(connected_ids)):
-                if ego_fut_lane_obj.id in connected_ids[j]:
-                    seg_seq = connected_ids[j]
-                    break
-            if seg_seq != 0:
-                init_idx = seg_seq.index(ego_start_lane_obj.id)
-                end_idx = seg_seq.index(ego_fut_lane_obj.id)
-                maneuver = 'go_straight'
-                for k in range(init_idx+1, end_idx+1):
-                    if self.am.city_lane_centerlines_dict[data['city']][seg_seq[k]].turn_direction != 'NONE':
-                        maneuver = self.am.city_lane_centerlines_dict[data['city']][seg_seq[k]].turn_direction
-            else:
-                init_left_id, init_right_id = ego_start_lane_obj.l_neighbor_id, ego_start_lane_obj.r_neighbor_id
-                left_connected_ids = self.am.dfs(init_left_id, data['city'])
-                right_connected_ids = self.am.dfs(init_right_id, data['city'])
-                seg_seq = 0
-                for j in range(len(left_connected_ids)):
-                    if ego_fut_lane_obj.id in left_connected_ids[j]:
-                        seg_seq = left_connected_ids[j]
-                        break
-                if seg_seq == 0:
-                    for j in range(len(right_connected_ids)):
-                        if ego_fut_lane_obj.id in right_connected_ids[j]:
-                            seg_seq = right_connected_ids[j]
-                            break
-                    if seg_seq == 0:
-                        maneuver = 'not_defined'
-                    else:
-                        maneuver = 'right_lane_change'
-                else:
-                    maneuver = 'left_lane_change'
-        else:
-            maneuver = ego_start_lane_obj.turn_direction
-        data['ego_maneuver'] = maneuver
-
-        for iz in range(sur_hists.shape[0]-1):
-            i = iz + 1
-            hist_traj = sur_hists[i]
-            path_cands = am.get_candidate_centerlines_for_traj(hist_traj, data['city'], viz=True)
-
-            seg_lists = []
-            for j in range(len(path_cands[1])):
-                seg_lists = seg_lists + path_cands[1][j]
-            seg_lists = list(dict.fromkeys(seg_lists))
-
-            closest_lane_obj, conf, dense_centerline, nearby_lane_ids, per_lane_dists = am.get_nearest_centerline(hist_traj[-1], data['city'], visualize=True)
-            lane_scores = sorted(per_lane_dists)
-            for j in range(len(lane_scores)):
-                idx = np.where(per_lane_dists == lane_scores[j])[0][0]
-                lane_id = nearby_lane_ids[idx]
-                if lane_id in seg_lists:
-                    break
-            sur_cur_lane_obj = am.city_lane_centerlines_dict[data['city']][lane_id]
-
-
-
-        return data
 
     def get_action_representation(self, data):
         action_aug = data['ego_aug']['traj']
