@@ -49,8 +49,8 @@ if "save_dir" not in config:
 if not os.path.isabs(config["save_dir"]):
     config["save_dir"] = os.path.join(root_path, "results", config["save_dir"])
 
-config["batch_size"] = 32
-config["val_batch_size"] = 32
+config["batch_size"] = 4
+config["val_batch_size"] = 4
 config["workers"] = 0
 config["val_workers"] = config["workers"]
 
@@ -97,19 +97,19 @@ class Net(nn.Module):
     """
     Lane Graph Network contains following components:
         1. ActorNet: a 1D CNN to process the trajectory input
-        2. MapNet: LaneGraphCNN to learn structured map representations 
+        2. MapNet: LaneGraphCNN to learn structured map representations
            from vectorized map data
-        3. Actor-Map Fusion Cycle: fuse the information between actor nodes 
+        3. Actor-Map Fusion Cycle: fuse the information between actor nodes
            and lane nodes:
-            a. A2M: introduces real-time traffic information to 
+            a. A2M: introduces real-time traffic information to
                 lane nodes, such as blockage or usage of the lanes
-            b. M2M:  updates lane node features by propagating the 
+            b. M2M:  updates lane node features by propagating the
                 traffic information over lane graphs
-            c. M2A: fuses updated map features with real-time traffic 
+            c. M2A: fuses updated map features with real-time traffic
                 information back to actors
             d. A2A: handles the interaction between actors and produces
                 the output actor features
-        4. PredNet: prediction header for motion forecasting using 
+        4. PredNet: prediction header for motion forecasting using
            feature from A2A
     """
     def __init__(self, config):
@@ -124,11 +124,10 @@ class Net(nn.Module):
         self.m2a = M2A(config)
         self.a2a = A2A(config)
 
-        self.pred_net = PredNet(config)
-
     def forward(self, data: Dict) -> Dict[str, List[Tensor]]:
         # construct actor feature
         actors, actor_idcs = actor_gather(gpu(data["feats"]))
+        veh_in_batch = [data['gt_preds'][i].shape[0] for i in range(len(data['gt_preds']))]
         actor_ctrs = gpu(data["ctrs"])
         actors = self.actor_net(actors)
 
@@ -136,22 +135,15 @@ class Net(nn.Module):
         graph = graph_gather(to_long(gpu(data["graph"])))
         nodes, node_idcs, node_ctrs = self.map_net(graph)
 
-        # actor-map fusion cycle 
+        # actor-map fusion cycle
         nodes = self.a2m(nodes, graph, actors, actor_idcs, actor_ctrs)
         nodes = self.m2m(nodes, graph)
         actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
         actors = self.a2a(actors, actor_idcs, actor_ctrs)
 
         # prediction
-        out = self.pred_net(actors, actor_idcs, actor_ctrs)
-        rot, orig = gpu(data["rot"]), gpu(data["orig"])
-        # transform prediction to world coordinates
-        for i in range(len(out["reg"])):
-            out["reg"][i] = torch.matmul(out["reg"][i], rot[i]) + orig[i].view(
-                1, 1, 1, -1
-            )
-        return out
 
+        return actors, veh_in_batch
 
 
 def actor_gather(actors: List[Tensor]) -> Tuple[Tensor, List[Tensor]]:
@@ -572,65 +564,6 @@ class EncodeDist(nn.Module):
 
         dist = self.block(dist)
         return dist
-
-
-class PredNet(nn.Module):
-    """
-    Final motion forecasting with Linear Residual block
-    """
-    def __init__(self, config):
-        super(PredNet, self).__init__()
-        self.config = config
-        norm = "GN"
-        ng = 1
-
-        n_actor = config["n_actor"]
-
-        pred = []
-        for i in range(config["num_mods"]):
-            pred.append(
-                nn.Sequential(
-                    LinearRes(n_actor, n_actor, norm=norm, ng=ng),
-                    nn.Linear(n_actor, 2 * config["num_preds"]),
-                )
-            )
-        self.pred = nn.ModuleList(pred)
-
-        self.att_dest = AttDest(n_actor)
-        self.cls = nn.Sequential(
-            LinearRes(n_actor, n_actor, norm=norm, ng=ng), nn.Linear(n_actor, 1)
-        )
-
-    def forward(self, actors: Tensor, actor_idcs: List[Tensor], actor_ctrs: List[Tensor]) -> Dict[str, List[Tensor]]:
-        preds = []
-        for i in range(len(self.pred)):
-            preds.append(self.pred[i](actors))
-        reg = torch.cat([x.unsqueeze(1) for x in preds], 1)
-        reg = reg.view(reg.size(0), reg.size(1), -1, 2)
-
-        for i in range(len(actor_idcs)):
-            idcs = actor_idcs[i]
-            ctrs = actor_ctrs[i].view(-1, 1, 1, 2)
-            reg[idcs] = reg[idcs] + ctrs
-
-        dest_ctrs = reg[:, :, -1].detach()
-        feats = self.att_dest(actors, torch.cat(actor_ctrs, 0), dest_ctrs)
-        cls = self.cls(feats).view(-1, self.config["num_mods"])
-
-        cls, sort_idcs = cls.sort(1, descending=True)
-        row_idcs = torch.arange(len(sort_idcs)).long().to(sort_idcs.device)
-        row_idcs = row_idcs.view(-1, 1).repeat(1, sort_idcs.size(1)).view(-1)
-        sort_idcs = sort_idcs.view(-1)
-        reg = reg[row_idcs, sort_idcs].view(cls.size(0), cls.size(1), -1, 2)
-
-        out = dict()
-        out["cls"], out["reg"] = [], []
-        for i in range(len(actor_idcs)):
-            idcs = actor_idcs[i]
-            ctrs = actor_ctrs[i].view(-1, 1, 1, 2)
-            out["cls"].append(cls[idcs])
-            out["reg"].append(reg[idcs])
-        return out
 
 
 class Att(nn.Module):
