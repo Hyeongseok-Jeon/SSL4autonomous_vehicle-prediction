@@ -4,7 +4,15 @@ from torch.nn.utils import weight_norm
 from importlib import import_module
 from LaneGCN.utils import gpu, to_long, Optimizer, StepLR
 import numpy as np
+from pytorch_metric_learning.distances import CosineSimilarity
+from pytorch_metric_learning.losses import NTXentLoss
 import copy
+import os
+
+file_path = os.path.abspath(__file__)
+# file_path = os.getcwd() + '/LaneGCN/lanegcn.py'
+root_path = os.path.dirname(file_path)
+model_name = os.path.basename(file_path).split(".")[0]
 
 ### config ###
 config_enc = dict()
@@ -16,7 +24,14 @@ config_action_emb["kernel_size"] = 5
 config_action_emb["dropout"] = 0.2
 config_action_emb["n_hid"] = 128
 config_enc['action_emb'] = config_action_emb
-config_enc['auxiliary'] = False
+config_enc['auxiliary'] = True
+config_enc['pre_trained'] = True
+
+if "save_dir" not in config_enc:
+    config_enc["save_dir"] = os.path.join(
+        root_path, "results", model_name
+    )
+
 
 class Chomp1d(nn.Module):
     def __init__(self, chomp_size):
@@ -96,62 +111,52 @@ class SSL_encoder(nn.Module):
     def __init__(self, config, base_model):
         super(SSL_encoder, self).__init__()
         self.relu = nn.ReLU()
-        self.base_net = base_model.Net(config)
+        self.base_net = base_model.Net(config).cuda()
         self.action_emb = TCN(input_size=102,
                               output_size=config_action_emb["output_size"],
                               num_channels=config_action_emb["num_channels"],
                               kernel_size=config_action_emb["kernel_size"],
-                              dropout=config_action_emb["dropout"])
+                              dropout=config_action_emb["dropout"]).cuda()
         self.out = nn.Linear(config_action_emb["output_size"]*2, config_action_emb["n_hid"]).double().cuda()
         self.auxiliary = nn.Linear(config_action_emb["n_hid"], config_action_emb["n_hid"]).double().cuda()
 
     def forward(self, data):
-        actors, veh_in_batch = base_net(data)
+        actors, veh_in_batch = self.base_net(data)
         batch_num = len(veh_in_batch)
         veh_num_in_batch = sum(veh_in_batch)
         ego_idx = [0] + [sum(veh_in_batch[:i+1]) for i in range(batch_num-1)]
         target_idx = [1] + [sum(veh_in_batch[:i+1])+1 for i in range(batch_num-1)]
 
         positive_idx = [np.random.randint(1, data['action'][i].shape[1]) for i in range(batch_num)]
-        action_original = torch.cat([gpu(data['action'][i][:, 0, :, :]) for i in range(batch_num)])
-        action_augmented = torch.cat([gpu(data['action'][i][:, positive_idx[i], :, :]) for i in range(batch_num)])
+        action_original = torch.cat([gpu(data['action'][i][1:2, 0, :, :]) for i in range(batch_num)])
+        action_augmented = torch.cat([gpu(data['action'][i][1:2, positive_idx[i], :, :]) for i in range(batch_num)])
+
         actions = torch.cat([action_original, action_augmented])
-        hid_act = action_emb(actions)[:,-1,:]
+        hid_act = self.action_emb(actions)[:,-1,:]
         hid_act_original = hid_act[:int(hid_act.shape[0]/2)]
         hid_act_augmented = hid_act[int(hid_act.shape[0]/2):]
         idx_mask = torch.arange(0, hid_act_original.shape[0])
 
-        sample_pos = []
-        sample_anchor = []
-        sample_neg = []
-        for i in range(batch_num):
-            # positive_samples = action_augmented + target actirs
-            # anchor = action_original + target actors
-            # negative_samples = action_original + sur actors
-            idxs = idx_mask[idx_mask!=ego_idx[i]]
-            idxs = idxs[idxs!=target_idx[i]]
+        sample_original = torch.cat([hid_act_original, actors[target_idx]],dim=1)
+        sample_augmented = torch.cat([hid_act_augmented, actors[target_idx]],dim=1)
 
-            positive_samples = torch.cat([hid_act_augmented[target_idx[i]], actors[target_idx[i]]]).unsqueeze(0)
-            anchor = torch.cat([hid_act_original[target_idx[i]], actors[target_idx[i]]]).unsqueeze(0)
-            negative_samples = torch.cat([hid_act_original[idxs], actors[idxs]], dim=1)
+        positive_samples = sample_augmented
+        anchor_sample = sample_original
 
-            sample_pos.append(positive_samples)
-            sample_anchor.append(anchor)
-            sample_neg.append(negative_samples)
-        sample_pos = torch.cat(sample_pos)
-        sample_anchor = torch.cat(sample_anchor)
-        sample_neg = torch.cat(sample_neg)
-
-        samples = torch.cat([sample_pos, sample_anchor, sample_neg])
-        hid = relu(out(samples))
+        samples = torch.cat([positive_samples, anchor_sample])
+        hid = self.relu(self.out(samples))
         if config_enc['auxiliary']:
-            hid = auxiliary(hid)
+            hid_aux = self.auxiliary(hid)
+            hid_positive = torch.cat([hid_aux[i].unsqueeze(0) for i in range(batch_num)])
+            hid_anchor = torch.cat([hid_aux[i + batch_num].unsqueeze(0) for i in range(batch_num)])
+            hid = [hid_positive, hid_anchor]
+            hid_aux = [hid_positive, hid_anchor]
+            return [hid, hid_aux]
 
         hid_positive = torch.cat([hid[i].unsqueeze(0) for i in range(batch_num)])
         hid_anchor = torch.cat([hid[i + batch_num].unsqueeze(0) for i in range(batch_num)])
-        hid_negatvie = [hid[2*batch_num+(veh_num_in_batch-2)*(i):2*batch_num+(veh_num_in_batch-2)*(i+1)] for i in range(batch_num)]
 
-        hid = [hid_positive, hid_anchor, hid_negatvie]
+        hid = [hid_positive, hid_anchor]
         return hid
 
 
@@ -159,20 +164,26 @@ class Loss(nn.Module):
     def __init__(self, config):
         super(Loss, self).__init__()
         self.config = config
-        self.cosine_sim = cosine_similarity
+        self.infoNCE = NTXentLoss()
 
     def forward(self, hid):
+        if isinstance(hid[0], list):
+            hid = hid[1]
+        batch_num = hid[0].shape[0]
         hid_positive = hid[0]
         hid_anchor = hid[1]
-        hid_negative = hid[2]
 
-        cos_sim_positive = cosine_sim(hid_positive, hid_anchor)
-        cos_sim_negative = [torch.sum(cosine_sim(hid_negative[i], torch.repeat_interleave(hid_anchor[i].unsqueeze(0), hid_negative[i].shape[0], dim=0))) for i in range(hid_positive.shape[0])]
+        samples = torch.zeros_like(torch.cat([hid_anchor, hid_positive]))
+        anc_idx = torch.arange(batch_num) * 2
+        pos_idx = torch.arange(batch_num) * 2 + 1
+        samples[anc_idx] = hid_anchor
+        samples[pos_idx] = hid_positive
+        labels = torch.arange(2*batch_num)
+        labels[anc_idx] = labels[pos_idx]
 
-        return loss_out
+        infoNCE_loss = self.infoNCE(samples, labels)
 
-def cosine_similarity(sample, anchor):
-    return torch.sum(sample * anchor, dim=1)/(torch.norm(sample, dim=1) * torch.norm(anchor, dim=1))
+        return infoNCE_loss
 
 
 def get_model(base_model_name):
@@ -182,11 +193,17 @@ def get_model(base_model_name):
     collate_fn = base_model.collate_fn
 
     encoder = SSL_encoder(config, base_model)
+    if config_enc['pre_trained'] == True:
+        pre_trained_weight = torch.load("LaneGCN/pre_trained" + '/36.000.ckpt')
+        pretrained_dict = pre_trained_weight['state_dict']
+        new_model_dict = encoder.state_dict()
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in new_model_dict}
+        new_model_dict.update(pretrained_dict)
+        encoder.load_state_dict(new_model_dict)
     encoder = encoder.cuda()
-
     loss = Loss(config).cuda()
 
     params = encoder.parameters()
     opt = Optimizer(params, config)
 
-    return config, Dataset, collate_fn, encoder, loss, opt
+    return config, config_enc, Dataset, collate_fn, encoder, loss, opt

@@ -67,7 +67,7 @@ def main():
     # Import all settings for experiment.
     args = parser.parse_args()
     model = import_module(args.model)
-    config, Dataset, collate_fn, net, loss, post_process, opt = model.get_model(args.base_model)
+    config, config_enc, Dataset, collate_fn, net, loss, opt = model.get_model(args.base_model)
 
     if config["horovod"]:
         opt.opt = hvd.DistributedOptimizer(
@@ -100,11 +100,11 @@ def main():
         )
 
         hvd.broadcast_parameters(net.state_dict(), root_rank=0)
-        val(config, val_loader, net, loss, post_process, 999)
+        val(config, config_enc, val_loader, net, loss, 999)
         return
 
     # Create log and copy all code
-    save_dir = config["save_dir"]
+    save_dir = config_enc["save_dir"]
     log = os.path.join(save_dir, "log")
     if hvd.rank() == 0:
         if not os.path.exists(save_dir):
@@ -154,7 +154,7 @@ def main():
     epoch = config["epoch"]
     remaining_epochs = int(np.ceil(config["num_epochs"] - epoch))
     for i in range(remaining_epochs):
-        train(epoch + i, config, train_loader, net, loss, post_process, opt, val_loader)
+        train(epoch + i, config, config_enc, train_loader, net, loss, opt, val_loader)
 
 
 def worker_init_fn(pid):
@@ -164,7 +164,7 @@ def worker_init_fn(pid):
     random.seed(random_seed)
 
 
-def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=None):
+def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=None):
     train_loader.sampler.set_epoch(int(epoch))
     net.train()
 
@@ -178,58 +178,65 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
 
     start_time = time.time()
     metrics = dict()
+    loss_tot = 0
+    loss_calc = 0
     for i, data in tqdm(enumerate(train_loader),disable=hvd.rank()):
         epoch += epoch_per_batch
         data = dict(data)
 
         output = net(data)
-        loss_out = loss(output, data)
-        post_out = post_process(output, data)
-        post_process.append(metrics, loss_out, post_out)
+        loss_out = loss(output)
 
         opt.zero_grad()
-        loss_out["loss"].backward()
+        loss_out.backward()
+        loss_tot = loss_tot + loss_out.item()
+        loss_calc = loss_calc + 1
         lr = opt.step(epoch)
 
         num_iters = int(np.round(epoch * num_batches))
         if hvd.rank() == 0 and (
             num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
-            save_ckpt(net, opt, config["save_dir"], epoch)
+            save_ckpt(net, opt, config_enc["save_dir"], epoch)
 
         if num_iters % display_iters == 0:
             dt = time.time() - start_time
-            metrics = sync(metrics)
             if hvd.rank() == 0:
-                post_process.display(metrics, dt, epoch, lr)
+                print(
+                    "infoNCE loss  = %2.4f, time = %2.4f"
+                    % (loss_tot/loss_calc, dt)
+                )
             start_time = time.time()
-            metrics = dict()
+            loss_tot = 0
+            loss_calc = 0
 
         if num_iters % val_iters == 0:
-            val(config, val_loader, net, loss, post_process, epoch)
+            val(config, config_enc, val_loader, net, loss, epoch)
 
         if epoch >= config["num_epochs"]:
-            val(config, val_loader, net, loss, post_process, epoch)
+            val(config, config_enc, val_loader, net, loss, epoch)
             return
 
 
-def val(config, data_loader, net, loss, post_process, epoch):
+def val(config, config_enc, data_loader, net, loss, epoch):
     net.eval()
 
     start_time = time.time()
-    metrics = dict()
+    loss_tot = 0
+    loss_calc = 0
     for i, data in enumerate(data_loader):
         data = dict(data)
         with torch.no_grad():
             output = net(data)
             loss_out = loss(output, data)
-            post_out = post_process(output, data)
-            post_process.append(metrics, loss_out, post_out)
-
+            loss_tot = loss_tot + loss_out.item()
+            loss_calc = loss_calc + 1
     dt = time.time() - start_time
-    metrics = sync(metrics)
     if hvd.rank() == 0:
-        post_process.display(metrics, dt, epoch)
+        print(
+            "validation infoNCE loss  = %2.4f, time = %2.4f"
+            % (loss_tot / loss_calc, dt)
+        )
     net.train()
 
 

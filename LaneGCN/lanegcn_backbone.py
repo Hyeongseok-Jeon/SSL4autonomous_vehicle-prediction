@@ -19,7 +19,7 @@ from utils import gpu, to_long,  Optimizer, StepLR
 from layers import Conv1d, Res1d, Linear, LinearRes, Null
 from numpy import float64, ndarray
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
-
+import time
 
 file_path = os.path.abspath(__file__)
 # file_path = os.getcwd() + '/LaneGCN/lanegcn.py'
@@ -35,7 +35,7 @@ config["save_freq"] = 1.0
 config["epoch"] = 0
 config["horovod"] = True
 config["opt"] = "adam"
-config["num_epochs"] = 36
+config["num_epochs"] = 50
 config["lr"] = [1e-3, 1e-4]
 config["lr_epochs"] = [32]
 config["lr_func"] = StepLR(config["lr"], config["lr_epochs"])
@@ -49,8 +49,8 @@ if "save_dir" not in config:
 if not os.path.isabs(config["save_dir"]):
     config["save_dir"] = os.path.join(root_path, "results", config["save_dir"])
 
-config["batch_size"] = 4
-config["val_batch_size"] = 4
+config["batch_size"] = 128
+config["val_batch_size"] = 128
 config["workers"] = 0
 config["val_workers"] = config["workers"]
 
@@ -140,9 +140,6 @@ class Net(nn.Module):
         nodes = self.m2m(nodes, graph)
         actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
         actors = self.a2a(actors, actor_idcs, actor_ctrs)
-
-        # prediction
-
         return actors, veh_in_batch
 
 
