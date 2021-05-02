@@ -128,8 +128,8 @@ class SSL_encoder(nn.Module):
         target_idx = [1] + [sum(veh_in_batch[:i+1])+1 for i in range(batch_num-1)]
 
         positive_idx = [np.random.randint(1, data['action'][i].shape[1]) for i in range(batch_num)]
-        action_original = torch.cat([gpu(data['action'][i][1:2, 0, :, :]) for i in range(batch_num)])
-        action_augmented = torch.cat([gpu(data['action'][i][1:2, positive_idx[i], :, :]) for i in range(batch_num)])
+        action_original = torch.cat([gpu(data['action'][i][0:1, 0, :, :]) for i in range(batch_num)])
+        action_augmented = torch.cat([gpu(data['action'][i][0:1, positive_idx[i], :, :]) for i in range(batch_num)])
 
         actions = torch.cat([action_original, action_augmented])
         hid_act = self.action_emb(actions)[:,-1,:]
