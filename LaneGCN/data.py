@@ -251,8 +251,8 @@ class ArgoDataset(Dataset):
         # target_traj_av = np.concatenate([data['gt_hists'][0], data['gt_preds'][0]], axis=0)
         # cl_list = am.get_candidate_centerlines_for_traj(target_traj_agent, data['city'], viz=True)
         # cl_list = am.get_candidate_centerlines_for_traj(target_traj_av, data['city'], viz=True)
-        ref_path_array = np.zeros(shape=(data['gt_hists'].shape[0], 100, 2))
-        for k in range(data['gt_hists'].shape[0]):
+        ref_path_array = np.zeros(shape=(1, 100, 2))
+        for k in range(1, 2):
             hist_traj = data['gt_hists'][k][np.nonzero(data['gt_hists'][k][:, 0]), :][0]
             if hist_traj.shape[0] == 1:
                 hist_traj = np.concatenate([hist_traj, hist_traj], axis=0)
@@ -271,9 +271,9 @@ class ArgoDataset(Dataset):
             cur_idx = np.argmin(np.linalg.norm(ref_path - hist_traj[-1], axis=1))
             ref_path_final = ref_path[cur_idx:cur_idx + 100]
             try:
-                ref_path_array[k, :, :] = ref_path_final
+                ref_path_array[k-1, :, :] = ref_path_final
             except:
-                ref_path_array[k, :, :] = -1
+                ref_path_array[k-1, :, :] = -1
         data['ref_path'] = ref_path_array
 
         return data
