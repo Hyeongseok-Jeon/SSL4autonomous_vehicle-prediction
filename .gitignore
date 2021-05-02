@@ -1,1 +1,7 @@
-/LaneGCN/dataset
+/LaneGCN/dataset/test_obs
+/LaneGCN/dataset/train
+/LaneGCN/dataset/val
+/LaneGCN/dataset/forecasting_test_v1.1.tar.gz
+/LaneGCN/dataset/forecasting_train_v1.1.tar.gz
+/LaneGCN/dataset/forecasting_val_v1.1.tar.gz
+
