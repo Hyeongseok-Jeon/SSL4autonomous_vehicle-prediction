@@ -6,6 +6,7 @@ import numpy as np
 import os
 import sys
 sys.path.extend(['/home/jhs/Desktop/SSL4autonomous_vehicle-prediction/LaneGCN'])
+sys.path.extend(['/home/user/data/HyeongseokJeon/SSL4autonomous_vehicle-prediction/LaneGCN'])
 from fractions import gcd
 from numbers import Number
 
