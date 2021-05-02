@@ -100,10 +100,14 @@ class ArgoDataset(Dataset):
         data = self.read_argo_data(idx)
         data = self.get_obj_feats(data)
         data['idx'] = idx
-        data = self.get_ref_path_agent(data)
-        data = self.get_ego_augmentation(data)
-        data = self.get_action_representation(data)
-        data = self.get_reaction_maneuver_class(data)
+        try:
+            data = self.get_ref_path_agent(data)
+            data = self.get_ego_augmentation(data)
+            data = self.get_action_representation(data)
+            data = self.get_reaction_maneuver_class(data)
+        except:
+            data['action'] = 'error'
+
         if 'raster' in self.config and self.config['raster']:
             x_min, x_max, y_min, y_max = self.config['pred_range']
             cx, cy = data['orig']
@@ -383,10 +387,6 @@ class ArgoDataset(Dataset):
                         pass
                 if regen_trial > 2 * len(val_idx):
                     regen = False
-
-        if len(aug_pos) == 0:
-            aug_pos.append(data['gt_preds'][0][-1])
-            ego_aug['relation'].append('no_augmentations')
 
         vel_list_prev_x = []
         vel_list_next_x = []
