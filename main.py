@@ -228,7 +228,7 @@ def val(config, config_enc, data_loader, net, loss, epoch):
         data = dict(data)
         with torch.no_grad():
             output = net(data)
-            loss_out = loss(output, data)
+            loss_out = loss(output)
             loss_tot = loss_tot + loss_out.item()
             loss_calc = loss_calc + 1
     dt = time.time() - start_time
