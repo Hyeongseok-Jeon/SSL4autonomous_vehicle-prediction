@@ -106,7 +106,11 @@ class ArgoDataset(Dataset):
             data = self.get_action_representation(data)
             data = self.get_reaction_maneuver_class(data)
         except:
+            data['ref_path'] = 'error'
+            data['ego_aug'] = 'error'
             data['action'] = 'error'
+            data['ego_maneuver'] = 'error'
+
 
         if 'raster' in self.config and self.config['raster']:
             x_min, x_max, y_min, y_max = self.config['pred_range']
