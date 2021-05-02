@@ -296,6 +296,9 @@ class ArgoDataset(Dataset):
             if nearby_lane_ids[i] in seg_lists:
                 final_pos_cands.append(self.am.get_cl_from_lane_seq([[nearby_lane_ids[i]]], data['city'])[0])
                 final_pos_segments.append(nearby_lane_ids[i])
+        if len(final_pos_cands) == 0:
+            final_pos_cands.append(self.am.get_cl_from_lane_seq([[closest_lane_obj.id]], data['city'])[0])
+            final_pos_segments.append(closest_lane_obj.id)
         final_pos_cands = np.concatenate(final_pos_cands)
 
         val_idx = []
