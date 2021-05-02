@@ -55,7 +55,7 @@ def main():
 
 
 
-    # val(config)
+    val(config)
     # test(config)
     train(config)
 
