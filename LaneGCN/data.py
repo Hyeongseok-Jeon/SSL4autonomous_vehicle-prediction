@@ -12,7 +12,7 @@ from argoverse.data_loading.argoverse_forecasting_loader import ArgoverseForecas
 from argoverse.map_representation.map_api import ArgoverseMap
 from skimage.transform import rotate
 import argoverse
-print(os.path.dirname(argoverse.__file__))
+
 '''
 additional data list
 1. gt_hists
