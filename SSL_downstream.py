@@ -7,8 +7,8 @@ from torch import Tensor, nn
 from LaneGCN.layers import Conv1d, Res1d, Linear, LinearRes, Null
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from fractions import gcd
-from LaneGCN.data import ArgoDataset, collate_fn
-
+from LaneGCN.data import ArgoDataset
+from LaneGCN.utils import Optimizer
 
 class downstream_net(nn.Module):
     def __init__(self, config, net):
@@ -190,15 +190,20 @@ class AttDest(nn.Module):
 
 def get_model(base_model_name):
     base_model = import_module(base_model_name + '_backbone')
-    config, Dataset, collate_fn, _, loss, post_process, opt = base_model.get_model()
+    config, Dataset, collate_fn, _, loss, post_process, _ = base_model.get_model()
     encoder = import_module('SSL_encoder')
-    _, _, _, _, net, _, _ = encoder.get_model(base_model_name)
+    _, config_enc, _, _, net, _, _ = encoder.get_model(base_model_name)
 
     pre_trained_weight = torch.load(config_enc['pre_trained_weight'])
-    net.load_state_dict(pre_trained_weight)
+    net.load_state_dict(pre_trained_weight["state_dict"])
     net.eval()
 
     model = downstream_net(config, net)
     model = model.cuda()
 
+    params = model.parameters()
+    opt = Optimizer(params, config)
+
     return config, ArgoDataset, collate_fn, model, loss, post_process, opt
+
+# TODO: diable auxiliary in encoder
