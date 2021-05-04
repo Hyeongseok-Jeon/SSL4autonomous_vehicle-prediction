@@ -167,7 +167,7 @@ class Loss(nn.Module):
         self.config = config
         self.infoNCE = NTXentLoss()
 
-    def forward(self, hid):
+    def forward(self, hid, data):
         if isinstance(hid[0], list):
             hid = hid[1]
         batch_num = hid[0].shape[0]
@@ -184,8 +184,7 @@ class Loss(nn.Module):
 
         infoNCE_loss = self.infoNCE(samples, labels)
         if torch.isnan(infoNCE_loss):
-            torch.save(samples,'error_samples.pk')
-            torch.save(labels, 'error_labels.pk')
+            torch.save(data,'error_data.pk')
         return infoNCE_loss
 
 
