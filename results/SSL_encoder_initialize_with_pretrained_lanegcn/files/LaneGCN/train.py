@@ -25,7 +25,7 @@ import horovod.torch as hvd
 
 from torch.utils.data.distributed import DistributedSampler
 
-from LaneGCN.utils import Logger, load_pretrain
+from utils import Logger, load_pretrain
 
 from mpi4py import MPI
 
@@ -34,20 +34,13 @@ comm = MPI.COMM_WORLD
 hvd.init()
 torch.cuda.set_device(hvd.local_rank())
 
-# root_path = os.path.dirname(os.path.abspath(__file__))
-root_path = os.getcwd()
+root_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, root_path)
 
 
 parser = argparse.ArgumentParser(description="Fuse Detection in Pytorch")
 parser.add_argument(
-    "-m", "--model", default="SSL_encoder", type=str, metavar="MODEL", help="model name"
-)
-parser.add_argument(
-    "--base_model", default="LaneGCN.lanegcn", type=str, metavar="MODEL", help="model name"
-)
-parser.add_argument(
-    "--memo", default="_initialize_with_pretrained_lanegcn"
+    "-m", "--model", default="lanegcn", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument("--eval", action="store_true")
 parser.add_argument(
@@ -57,8 +50,6 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
 )
 
-parser.add_argument("--mode", default='client')
-parser.add_argument("--port", default=52162)
 
 def main():
     seed = hvd.rank()
@@ -70,7 +61,7 @@ def main():
     # Import all settings for experiment.
     args = parser.parse_args()
     model = import_module(args.model)
-    config, config_enc, Dataset, collate_fn, net, loss, opt = model.get_model(args.base_model)
+    config, Dataset, collate_fn, net, loss, post_process, opt = model.get_model()
 
     if config["horovod"]:
         opt.opt = hvd.DistributedOptimizer(
@@ -103,11 +94,11 @@ def main():
         )
 
         hvd.broadcast_parameters(net.state_dict(), root_rank=0)
-        val(config, config_enc, val_loader, net, loss, 999)
+        val(config, val_loader, net, loss, post_process, 999)
         return
 
     # Create log and copy all code
-    save_dir = config_enc["save_dir"] + args.memo
+    save_dir = config["save_dir"]
     log = os.path.join(save_dir, "log")
     if hvd.rank() == 0:
         if not os.path.exists(save_dir):
@@ -122,15 +113,7 @@ def main():
                 os.makedirs(dst_dir)
             for f in files:
                 shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
-        src_dirs = [os.path.join(root_path, 'LaneGCN')]
-        dst_dirs = [os.path.join(save_dir, "files", 'LaneGCN')]
-        for src_dir, dst_dir in zip(src_dirs, dst_dirs):
-            files = [f for f in os.listdir(src_dir) if f.endswith(".py")]
-            if not os.path.exists(dst_dir):
-                os.makedirs(dst_dir)
-            for f in files:
-                shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
-    
+
     # Data loader for training
     dataset = Dataset(config["train_split"], config, train=True)
     train_sampler = DistributedSampler(
@@ -138,7 +121,7 @@ def main():
     )
     train_loader = DataLoader(
         dataset,
-        batch_size=2,
+        batch_size=config["batch_size"],
         num_workers=config["workers"],
         sampler=train_sampler,
         collate_fn=collate_fn,
@@ -158,20 +141,15 @@ def main():
         collate_fn=collate_fn,
         pin_memory=True,
     )
-    config["display_iters"] = len(train_loader.dataset.split)
-    config["val_iters"] = len(train_loader.dataset.split) * 2
 
     hvd.broadcast_parameters(net.state_dict(), root_rank=0)
     hvd.broadcast_optimizer_state(opt.opt, root_rank=0)
 
     epoch = config["epoch"]
     remaining_epochs = int(np.ceil(config["num_epochs"] - epoch))
-    if hvd.rank() == 0:
-        print('logging directory :  ' + save_dir)
     for i in range(remaining_epochs):
-        check = train(epoch + i, config, config_enc, train_loader, net, loss, opt, val_loader)
-        if check == 0:
-            break
+        train(epoch + i, config, train_loader, net, loss, post_process, opt, val_loader)
+
 
 def worker_init_fn(pid):
     np_seed = hvd.rank() * 1024 + int(pid)
@@ -180,7 +158,7 @@ def worker_init_fn(pid):
     random.seed(random_seed)
 
 
-def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=None):
+def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=None):
     train_loader.sampler.set_epoch(int(epoch))
     net.train()
 
@@ -194,68 +172,58 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
 
     start_time = time.time()
     metrics = dict()
-    loss_tot = 0
-    loss_calc = 0
     for i, data in tqdm(enumerate(train_loader),disable=hvd.rank()):
         epoch += epoch_per_batch
         data = dict(data)
 
         output = net(data)
-        loss_out = loss(output)
+        loss_out = loss(output, data)
+        post_out = post_process(output, data)
+        post_process.append(metrics, loss_out, post_out)
 
         opt.zero_grad()
-        loss_out.backward()
-        loss_tot = loss_tot + loss_out.item()
-        loss_calc = loss_calc + 1
+        loss_out["loss"].backward()
         lr = opt.step(epoch)
-        print(output)
-        if torch.isnan(loss_out):
-            return 0
 
         num_iters = int(np.round(epoch * num_batches))
         if hvd.rank() == 0 and (
             num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
-            save_ckpt(net, opt, config_enc["save_dir"], epoch)
+            save_ckpt(net, opt, config["save_dir"], epoch)
 
         if num_iters % display_iters == 0:
             dt = time.time() - start_time
+            metrics = sync(metrics)
             if hvd.rank() == 0:
-                print(
-                    "infoNCE loss  = %2.4f, time = %2.4f"
-                    % (loss_tot/loss_calc, dt)
-                )
+                post_process.display(metrics, dt, epoch, lr)
             start_time = time.time()
-            loss_tot = 0
-            loss_calc = 0
+            metrics = dict()
 
         if num_iters % val_iters == 0:
-            val(config, config_enc, val_loader, net, loss, epoch)
+            val(config, val_loader, net, loss, post_process, epoch)
 
         if epoch >= config["num_epochs"]:
-            val(config, config_enc, val_loader, net, loss, epoch)
-            return 1
+            val(config, val_loader, net, loss, post_process, epoch)
+            return
 
 
-def val(config, config_enc, data_loader, net, loss, epoch):
+def val(config, data_loader, net, loss, post_process, epoch):
     net.eval()
 
     start_time = time.time()
-    loss_tot = 0
-    loss_calc = 0
+    metrics = dict()
     for i, data in enumerate(data_loader):
         data = dict(data)
         with torch.no_grad():
             output = net(data)
-            loss_out = loss(output)
-            loss_tot = loss_tot + loss_out.item()
-            loss_calc = loss_calc + 1
+            loss_out = loss(output, data)
+            post_out = post_process(output, data)
+            post_process.append(metrics, loss_out, post_out)
+
     dt = time.time() - start_time
+    metrics = sync(metrics)
     if hvd.rank() == 0:
-        print(
-            "validation infoNCE loss  = %2.4f, time = %2.4f"
-            % (loss_tot / loss_calc, dt)
-        )
+        post_process.display(metrics, dt, epoch)
     net.train()
 
 

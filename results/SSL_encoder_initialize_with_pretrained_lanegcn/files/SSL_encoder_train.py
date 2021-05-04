@@ -201,7 +201,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         data = dict(data)
 
         output = net(data)
-        loss_out = loss(output)
+        loss_out = loss(output, data)
 
         opt.zero_grad()
         loss_out.backward()
