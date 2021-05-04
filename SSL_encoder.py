@@ -206,8 +206,7 @@ def consine_similarity(pair):
     num = torch.sum(pair[0:1] * pair[1:], dim=1)
     den = torch.norm(pair[0:1]) * torch.norm(pair[1:], dim=1)
     sim = num / den
-    print(sim)
-    # sim = torch.clamp(sim, -1, 1)
+    sim = torch.clamp(sim, -1, 1)
 
     return torch.sum(1 - (torch.arccos(sim) / np.pi))
 
