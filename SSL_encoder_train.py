@@ -323,6 +323,7 @@ def infoNCELoss(samples, labels):
         print(i)
         print(num)
         print(den)
+        print(loss)
     return -torch.log(loss_tot/batch_num)
 
 def consine_similarity(pair):
