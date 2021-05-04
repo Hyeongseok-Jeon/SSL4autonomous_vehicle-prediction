@@ -210,6 +210,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         lr = opt.step(epoch)
         print(output)
         if torch.isnan(loss_out):
+            print('nan loss')
             return 0
 
         num_iters = int(np.round(epoch * num_batches))
