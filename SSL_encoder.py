@@ -184,7 +184,7 @@ class Loss(nn.Module):
 
         infoNCE_loss = self.infoNCE(samples, labels)
         if torch.isnan(infoNCE_loss):
-            torch.save(data,'error_data.pk')
+            torch.save(data['file_name'],'error_data.pk')
         return infoNCE_loss
 
 
