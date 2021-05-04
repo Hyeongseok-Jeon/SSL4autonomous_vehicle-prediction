@@ -169,8 +169,9 @@ def main():
     if hvd.rank() == 0:
         print('logging directory :  ' + save_dir)
     for i in range(remaining_epochs):
-        train(epoch + i, config, config_enc, train_loader, net, loss, opt, val_loader)
-
+        check = train(epoch + i, config, config_enc, train_loader, net, loss, opt, val_loader)
+        if check == 0:
+            break
 
 def worker_init_fn(pid):
     np_seed = hvd.rank() * 1024 + int(pid)
@@ -207,6 +208,9 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         loss_tot = loss_tot + loss_out.item()
         loss_calc = loss_calc + 1
         lr = opt.step(epoch)
+        print(loss_out.item())
+        if torch.isnan(loss_out.item()):
+            return 0
 
         num_iters = int(np.round(epoch * num_batches))
         if hvd.rank() == 0 and (
@@ -230,7 +234,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
 
         if epoch >= config["num_epochs"]:
             val(config, config_enc, val_loader, net, loss, epoch)
-            return
+            return 1
 
 
 def val(config, config_enc, data_loader, net, loss, epoch):

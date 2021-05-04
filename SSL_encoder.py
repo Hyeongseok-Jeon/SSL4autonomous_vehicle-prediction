@@ -196,7 +196,7 @@ def get_model(base_model_name):
     encoder = SSL_encoder(config, base_model)
     if config_enc['pre_trained'] == True:
         pre_trained_weight = torch.load("LaneGCN/pre_trained" + '/36.000.ckpt')
-        print('pretraind weigth is loaded from "LaneGCN/pre_trained/36.0000.ckpt"')
+        print('pretrained weight is loaded from "LaneGCN/pre_trained/36.0000.ckpt"')
         pretrained_dict = pre_trained_weight['state_dict']
         new_model_dict = encoder.state_dict()
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in new_model_dict}
