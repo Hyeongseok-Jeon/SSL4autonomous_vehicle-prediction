@@ -136,7 +136,7 @@ def main():
     )
     train_loader = DataLoader(
         dataset,
-        batch_size=4,
+        batch_size=2,
         num_workers=config["workers"],
         sampler=train_sampler,
         collate_fn=collate_fn,
