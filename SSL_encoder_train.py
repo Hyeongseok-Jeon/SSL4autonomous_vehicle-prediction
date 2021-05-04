@@ -209,8 +209,6 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         lr = opt.step(epoch)
 
         if torch.isnan(loss_out):
-            print('output')
-            print(output)
             hid = output
             hid = hid[1]
             batch_num = hid[0].shape[0]
