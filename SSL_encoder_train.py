@@ -136,7 +136,7 @@ def main():
     )
     train_loader = DataLoader(
         dataset,
-        batch_size=config["batch_size"],
+        batch_size=2,
         num_workers=config["workers"],
         sampler=train_sampler,
         collate_fn=collate_fn,
@@ -211,10 +211,14 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         if torch.isnan(loss_out):
             hid = output
             hid = hid[1]
+
             batch_num = hid[0].shape[0]
             hid_positive = hid[0]
             hid_anchor = hid[1]
-
+            if torch.sum(torch.isnan(hid_positive)) > 0:
+                print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+            if torch.sum(torch.isnan(hid_anchor)) > 0:
+                print('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')
             samples = torch.zeros_like(torch.cat([hid_anchor, hid_positive]))
             anc_idx = torch.arange(batch_num) * 2
             pos_idx = torch.arange(batch_num) * 2 + 1
