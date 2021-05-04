@@ -136,7 +136,7 @@ def main():
     )
     train_loader = DataLoader(
         dataset,
-        batch_size=2,
+        batch_size=config['batch_size'],
         num_workers=config["workers"],
         sampler=train_sampler,
         collate_fn=collate_fn,
@@ -207,7 +207,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         loss_tot = loss_tot + loss_out.item()
         loss_calc = loss_calc + 1
         lr = opt.step(epoch)
-
+        print(loss_out)
         if torch.isnan(loss_out):
             print('output')
             print(output)
