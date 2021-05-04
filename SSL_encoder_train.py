@@ -46,6 +46,9 @@ parser.add_argument(
 parser.add_argument(
     "--base_model", default="LaneGCN.lanegcn", type=str, metavar="MODEL", help="model name"
 )
+parser.add_argument(
+    "--memo", default="_initialize_with_pretrained_lanegcn"
+)
 parser.add_argument("--eval", action="store_true")
 parser.add_argument(
     "--resume", default="", type=str, metavar="RESUME", help="checkpoint path"
@@ -104,7 +107,7 @@ def main():
         return
 
     # Create log and copy all code
-    save_dir = config_enc["save_dir"]
+    save_dir = config_enc["save_dir"] + args.memo
     log = os.path.join(save_dir, "log")
     if hvd.rank() == 0:
         if not os.path.exists(save_dir):
@@ -127,7 +130,7 @@ def main():
                 os.makedirs(dst_dir)
             for f in files:
                 shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
-
+    
     # Data loader for training
     dataset = Dataset(config["train_split"], config, train=True)
     train_sampler = DistributedSampler(
@@ -163,6 +166,8 @@ def main():
 
     epoch = config["epoch"]
     remaining_epochs = int(np.ceil(config["num_epochs"] - epoch))
+    if hvd.rank() == 0:
+        print('logging directory :  ' + save_dir)
     for i in range(remaining_epochs):
         train(epoch + i, config, config_enc, train_loader, net, loss, opt, val_loader)
 
