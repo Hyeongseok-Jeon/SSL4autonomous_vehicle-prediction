@@ -208,7 +208,7 @@ def consine_similarity(pair):
     sim = num / den
     sim[sim > 1] = torch.ones_like(sim[sim > 1])
 
-    return torch.sum(1 - (torch.arccos(sim)) / np.pi)
+    return torch.sum(1 - (torch.arccos(sim)/ np.pi))
 
 
 def get_model(base_model_name):
