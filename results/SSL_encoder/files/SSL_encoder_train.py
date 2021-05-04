@@ -119,9 +119,17 @@ def main():
                 os.makedirs(dst_dir)
             for f in files:
                 shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+        src_dirs = [os.path.join(root_path, 'LaneGCN')]
+        dst_dirs = [os.path.join(save_dir, "files", 'LaneGCN')]
+        for src_dir, dst_dir in zip(src_dirs, dst_dirs):
+            files = [f for f in os.listdir(src_dir) if f.endswith(".py")]
+            if not os.path.exists(dst_dir):
+                os.makedirs(dst_dir)
+            for f in files:
+                shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
 
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=False)
+    dataset = Dataset(config["train_split"], config, train=True)
     train_sampler = DistributedSampler(
         dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )
@@ -183,17 +191,17 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
     loss_tot = 0
     loss_calc = 0
     for i, data in tqdm(enumerate(train_loader),disable=hvd.rank()):
-        # epoch += epoch_per_batch
-        # data = dict(data)
-        #
-        # output = net(data)
-        # loss_out = loss(output)
-        #
-        # opt.zero_grad()
-        # loss_out.backward()
-        # loss_tot = loss_tot + loss_out.item()
-        # loss_calc = loss_calc + 1
-        # lr = opt.step(epoch)
+        epoch += epoch_per_batch
+        data = dict(data)
+
+        output = net(data)
+        loss_out = loss(output)
+
+        opt.zero_grad()
+        loss_out.backward()
+        loss_tot = loss_tot + loss_out.item()
+        loss_calc = loss_calc + 1
+        lr = opt.step(epoch)
 
         num_iters = int(np.round(epoch * num_batches))
         if hvd.rank() == 0 and (
@@ -201,16 +209,16 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         ):
             save_ckpt(net, opt, config_enc["save_dir"], epoch)
 
-        # if num_iters % display_iters == 0:
-        #     dt = time.time() - start_time
-        #     if hvd.rank() == 0:
-        #         print(
-        #             "infoNCE loss  = %2.4f, time = %2.4f"
-        #             % (loss_tot/loss_calc, dt)
-        #         )
-        #     start_time = time.time()
-        #     loss_tot = 0
-        #     loss_calc = 0
+        if num_iters % display_iters == 0:
+            dt = time.time() - start_time
+            if hvd.rank() == 0:
+                print(
+                    "infoNCE loss  = %2.4f, time = %2.4f"
+                    % (loss_tot/loss_calc, dt)
+                )
+            start_time = time.time()
+            loss_tot = 0
+            loss_calc = 0
 
         if num_iters % val_iters == 0:
             val(config, config_enc, val_loader, net, loss, epoch)

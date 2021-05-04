@@ -62,7 +62,7 @@ def main():
     config, config_enc, Dataset, collate_fn, net, loss, opt = model.get_model(args.base_model)
 
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=False)
+    dataset = Dataset(config["train_split"], config, train=True)
     train_sampler = DistributedSampler(
         dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )

@@ -119,6 +119,14 @@ def main():
                 os.makedirs(dst_dir)
             for f in files:
                 shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+        src_dirs = [os.path.join(root_path, 'LaneGCN')]
+        dst_dirs = [os.path.join(save_dir, "files", 'LaneGCN')]
+        for src_dir, dst_dir in zip(src_dirs, dst_dirs):
+            files = [f for f in os.listdir(src_dir) if f.endswith(".py")]
+            if not os.path.exists(dst_dir):
+                os.makedirs(dst_dir)
+            for f in files:
+                shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
 
     # Data loader for training
     dataset = Dataset(config["train_split"], config, train=True)
