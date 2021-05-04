@@ -205,8 +205,9 @@ def consine_similarity(pair):
     anchor = pair[0]
     num = torch.sum(anchor * pair[1:], dim= 1)
     den = torch.norm(anchor) * torch.norm(pair[1:], dim=1)
-
-    return 1 - (torch.sum(torch.arccos(num / den)) / np.pi)
+    sim = num/den
+    sim[sim>1] = torch.ones_like(sim[sim>1])
+    return 1 - (torch.sum(torch.arccos(sim)) / np.pi)
 
 def get_model(base_model_name):
     base_model = import_module(base_model_name + '_backbone')

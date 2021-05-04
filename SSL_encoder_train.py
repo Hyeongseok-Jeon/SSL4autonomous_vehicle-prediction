@@ -306,33 +306,32 @@ def sync(data):
 
 
 def infoNCELoss(samples, labels):
-    batch_num = int(len(labels) / 2)
+    batch_num = int(len(labels)/2)
     label_uni = torch.unique(labels)
     loss_tot = 0
     for i in range(batch_num):
         label = label_uni[i]
-        pos_pair = samples[labels == label]
-        neg_pairs = torch.cat([samples[0:1], samples[labels != label]])
+        pos_pair = samples[labels==label]
+        neg_pairs = torch.cat([samples[0:1], samples[labels!=label]])
 
         num = consine_similarity(pos_pair)
-        den = consine_similarity(neg_pairs) + num
-        loss = num / den
+        den = consine_similarity(neg_pairs)+num
+        loss = num/den
         loss_tot = loss_tot + loss
 
         print(i)
         print(num)
         print(den)
         print(loss)
-    return -torch.log(loss_tot / batch_num)
-
+    return -torch.log(loss_tot/batch_num)
 
 def consine_similarity(pair):
     anchor = pair[0]
-    num = torch.sum(anchor * pair[1:], dim=1)
+    num = torch.sum(anchor * pair[1:], dim= 1)
     den = torch.norm(anchor) * torch.norm(pair[1:], dim=1)
-
-    return 1 - (torch.sum(torch.arccos(num / den)) / np.pi)
-
+    sim = num/den
+    sim[sim>1] = torch.ones_like(sim[sim>1])
+    return 1 - (torch.sum(torch.arccos(sim)) / np.pi)
 
 if __name__ == "__main__":
     main()
