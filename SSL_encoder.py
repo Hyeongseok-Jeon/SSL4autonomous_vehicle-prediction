@@ -200,20 +200,14 @@ def infoNCELoss(samples, labels):
         loss = num/den
         loss_tot = loss_tot + loss
 
-    return loss_tot
+    return -torch.log(loss_tot/batch_num)
 
 def consine_similarity(pair):
-    num_samples = pair.shape[0]-1
-    achor = pair[0]
-    out = 0
-    for i in range(num_samples):
-        sample = pair[i+1]
-        num = torch.sum(achor * sample)
-        den = torch.norm(achor) * torch.norm(sample)
-        sim = num/den
-        out = out + sim
+    anchor = pair[0]
+    num = torch.sum(anchor * pair[1:], dim= 1)
+    den = torch.norm(anchor) * torch.norm(pair[1:], dim=1)
 
-    return out
+    return torch.sum(num / den)
 
 def get_model(base_model_name):
     base_model = import_module(base_model_name + '_backbone')
