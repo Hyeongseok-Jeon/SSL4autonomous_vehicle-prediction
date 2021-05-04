@@ -22,13 +22,11 @@ import torch
 from torch.utils.data import Sampler, DataLoader
 import horovod.torch as hvd
 
-
 from torch.utils.data.distributed import DistributedSampler
 
 from LaneGCN.utils import Logger, load_pretrain
 
 from mpi4py import MPI
-
 
 comm = MPI.COMM_WORLD
 hvd.init()
@@ -37,7 +35,6 @@ torch.cuda.set_device(hvd.local_rank())
 # root_path = os.path.dirname(os.path.abspath(__file__))
 root_path = os.getcwd()
 sys.path.insert(0, root_path)
-
 
 parser = argparse.ArgumentParser(description="Fuse Detection in Pytorch")
 parser.add_argument(
@@ -59,6 +56,7 @@ parser.add_argument(
 
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
+
 
 def main():
     seed = hvd.rank()
@@ -130,7 +128,7 @@ def main():
                 os.makedirs(dst_dir)
             for f in files:
                 shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
-    
+
     # Data loader for training
     dataset = Dataset(config["train_split"], config, train=True)
     train_sampler = DistributedSampler(
@@ -173,6 +171,7 @@ def main():
         if check == 0:
             break
 
+
 def worker_init_fn(pid):
     np_seed = hvd.rank() * 1024 + int(pid)
     np.random.seed(np_seed)
@@ -196,7 +195,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
     metrics = dict()
     loss_tot = 0
     loss_calc = 0
-    for i, data in tqdm(enumerate(train_loader),disable=hvd.rank()):
+    for i, data in tqdm(enumerate(train_loader), disable=hvd.rank()):
         epoch += epoch_per_batch
         data = dict(data)
 
@@ -233,7 +232,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
 
         num_iters = int(np.round(epoch * num_batches))
         if hvd.rank() == 0 and (
-            num_iters % save_iters == 0 or epoch >= config["num_epochs"]
+                num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
             save_ckpt(net, opt, config_enc["save_dir"], epoch)
 
@@ -242,7 +241,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
             if hvd.rank() == 0:
                 print(
                     "infoNCE loss  = %2.4f, time = %2.4f"
-                    % (loss_tot/loss_calc, dt)
+                    % (loss_tot / loss_calc, dt)
                 )
             start_time = time.time()
             loss_tot = 0
@@ -307,31 +306,33 @@ def sync(data):
 
 
 def infoNCELoss(samples, labels):
-    batch_num = int(len(labels)/2)
+    batch_num = int(len(labels) / 2)
     label_uni = torch.unique(labels)
     loss_tot = 0
     for i in range(batch_num):
         label = label_uni[i]
-        pos_pair = samples[labels==label]
-        neg_pairs = torch.cat([samples[0:1], samples[labels!=label]])
+        pos_pair = samples[labels == label]
+        neg_pairs = torch.cat([samples[0:1], samples[labels != label]])
 
         num = consine_similarity(pos_pair)
-        den = consine_similarity(neg_pairs)+num
-        loss = num/den
+        den = consine_similarity(neg_pairs) + num
+        loss = num / den
         loss_tot = loss_tot + loss
 
         print(i)
         print(num)
         print(den)
         print(loss)
-    return -torch.log(loss_tot/batch_num)
+    return -torch.log(loss_tot / batch_num)
+
 
 def consine_similarity(pair):
     anchor = pair[0]
-    num = torch.sum(anchor * pair[1:], dim= 1)
+    num = torch.sum(anchor * pair[1:], dim=1)
     den = torch.norm(anchor) * torch.norm(pair[1:], dim=1)
 
-    return torch.sum(num / den)
+    return 1 - (torch.arccos(torch.sum(num / den)) / np.pi)
+
 
 if __name__ == "__main__":
     main()
