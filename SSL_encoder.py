@@ -26,7 +26,7 @@ config_action_emb["n_hid"] = 128
 config_enc['action_emb'] = config_action_emb
 config_enc['auxiliary'] = True
 config_enc['pre_trained'] = True
-config_enc['pre_trained_weight'] = os.path.join(root_path, 'results','SSL_encoder', '0.000.ckpt')
+config_enc['pre_trained_weight'] = os.path.join(root_path, 'results', 'SSL_encoder', '0.000.ckpt')
 
 if "save_dir" not in config_enc:
     config_enc["save_dir"] = os.path.join(
@@ -112,50 +112,49 @@ class SSL_encoder(nn.Module):
     def __init__(self, config, base_model):
         super(SSL_encoder, self).__init__()
         self.relu = nn.ReLU()
-        self.base_net = base_model.Net(config).cuda()
+        self.base_net = base_model.Net(config)
         self.action_emb = TCN(input_size=102,
                               output_size=config_action_emb["output_size"],
                               num_channels=config_action_emb["num_channels"],
                               kernel_size=config_action_emb["kernel_size"],
                               dropout=config_action_emb["dropout"]).cuda()
-        self.out = nn.Linear(config_action_emb["output_size"]*2, config_action_emb["n_hid"]).double().cuda()
-        self.auxiliary = nn.Linear(config_action_emb["n_hid"], config_action_emb["n_hid"]).double().cuda()
+        self.out = nn.Linear(config_action_emb["output_size"] * 2, config_action_emb["n_hid"]).double()
+        self.auxiliary = nn.Linear(config_action_emb["n_hid"], config_action_emb["n_hid"]).double()
 
     def forward(self, data):
         actors, veh_in_batch = self.base_net(data)
         batch_num = len(veh_in_batch)
         veh_num_in_batch = sum(veh_in_batch)
-        ego_idx = [0] + [sum(veh_in_batch[:i+1]) for i in range(batch_num-1)]
-        target_idx = [1] + [sum(veh_in_batch[:i+1])+1 for i in range(batch_num-1)]
+        ego_idx = [0] + [sum(veh_in_batch[:i + 1]) for i in range(batch_num - 1)]
+        target_idx = [1] + [sum(veh_in_batch[:i + 1]) + 1 for i in range(batch_num - 1)]
 
         positive_idx = [np.random.randint(1, data['action'][i].shape[1]) for i in range(batch_num)]
         action_original = torch.cat([gpu(data['action'][i][0:1, 0, :, :]) for i in range(batch_num)])
         action_augmented = torch.cat([gpu(data['action'][i][0:1, positive_idx[i], :, :]) for i in range(batch_num)])
 
         actions = torch.cat([action_original, action_augmented])
-        hid_act = self.action_emb(actions)[:,-1,:]
-        hid_act_original = hid_act[:int(hid_act.shape[0]/2)]
-        hid_act_augmented = hid_act[int(hid_act.shape[0]/2):]
+        hid_act = self.action_emb(actions)[:, -1, :]
+        hid_act_original = hid_act[:int(hid_act.shape[0] / 2)]
+        hid_act_augmented = hid_act[int(hid_act.shape[0] / 2):]
         idx_mask = torch.arange(0, hid_act_original.shape[0])
 
-        sample_original = torch.cat([hid_act_original, actors[target_idx]],dim=1)
-        sample_augmented = torch.cat([hid_act_augmented, actors[target_idx]],dim=1)
+        sample_original = torch.cat([hid_act_original, actors[target_idx]], dim=1)
+        sample_augmented = torch.cat([hid_act_augmented, actors[target_idx]], dim=1)
 
         positive_samples = sample_augmented
         anchor_sample = sample_original
 
         samples = torch.cat([positive_samples, anchor_sample])
-        hid = self.relu(self.out(samples))
+        hid_tmp = self.relu(self.out(samples))
+        hid_positive = torch.cat([hid_tmp[i].unsqueeze(0) for i in range(batch_num)])
+        hid_anchor = torch.cat([hid_tmp[i + batch_num].unsqueeze(0) for i in range(batch_num)])
         if config_enc['auxiliary']:
-            hid_aux = self.auxiliary(hid)
+            hid = [hid_positive, hid_anchor]
+            hid_aux = self.auxiliary(hid_tmp)
             hid_positive = torch.cat([hid_aux[i].unsqueeze(0) for i in range(batch_num)])
             hid_anchor = torch.cat([hid_aux[i + batch_num].unsqueeze(0) for i in range(batch_num)])
-            hid = [hid_positive, hid_anchor]
             hid_aux = [hid_positive, hid_anchor]
             return [hid, hid_aux]
-
-        hid_positive = torch.cat([hid[i].unsqueeze(0) for i in range(batch_num)])
-        hid_anchor = torch.cat([hid[i + batch_num].unsqueeze(0) for i in range(batch_num)])
 
         hid = [hid_positive, hid_anchor]
         return hid
@@ -178,36 +177,39 @@ class Loss(nn.Module):
         pos_idx = torch.arange(batch_num) * 2 + 1
         samples[anc_idx] = hid_anchor
         samples[pos_idx] = hid_positive
-        labels = torch.arange(2*batch_num)
+        labels = torch.arange(2 * batch_num)
         labels[anc_idx] = labels[pos_idx]
 
         infoNCE_loss = infoNCELoss(samples, labels)
 
         return infoNCE_loss
 
+
 def infoNCELoss(samples, labels):
-    batch_num = int(len(labels)/2)
+    batch_num = int(len(labels) / 2)
     label_uni = torch.unique(labels)
     loss_tot = 0
     for i in range(batch_num):
         label = label_uni[i]
-        pos_pair = samples[labels==label]
-        neg_pairs = torch.cat([samples[0:1], samples[labels!=label]])
+        pos_pair = samples[labels == label]
+        neg_pairs = torch.cat([pos_pair[0:1], samples[labels != label]])
 
         num = consine_similarity(pos_pair)
-        den = consine_similarity(neg_pairs)+num
-        loss = num/den
+        den = consine_similarity(neg_pairs) + num
+        loss = num / den
         loss_tot = loss_tot + loss
 
-    return -torch.log(loss_tot/batch_num)
+    return -torch.log(loss_tot / batch_num)
+
 
 def consine_similarity(pair):
-    anchor = pair[0]
-    num = torch.sum(anchor * pair[1:], dim= 1)
-    den = torch.norm(anchor) * torch.norm(pair[1:], dim=1)
-    sim = num/den
-    sim[sim>1] = torch.ones_like(sim[sim>1])
+    num = torch.sum(pair[0:1] * pair[1:], dim=1)
+    den = torch.norm(pair[0:1]) * torch.norm(pair[1:], dim=1)
+    sim = num / den
+    sim[sim > 1] = torch.ones_like(sim[sim > 1])
+
     return 1 - (torch.sum(torch.arccos(sim)) / np.pi)
+
 
 def get_model(base_model_name):
     base_model = import_module(base_model_name + '_backbone')
