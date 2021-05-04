@@ -211,6 +211,21 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
 
         if torch.isnan(loss_out):
             print(output)
+            hid = output
+            batch_num = hid[0].shape[0]
+            hid_positive = hid[0]
+            hid_anchor = hid[1]
+
+            samples = torch.zeros_like(torch.cat([hid_anchor, hid_positive]))
+            anc_idx = torch.arange(batch_num) * 2
+            pos_idx = torch.arange(batch_num) * 2 + 1
+            samples[anc_idx] = hid_anchor
+            samples[pos_idx] = hid_positive
+            labels = torch.arange(2 * batch_num)
+            labels[anc_idx] = labels[pos_idx]
+
+            infoNCE_loss = infoNCELoss(samples, labels)
+
             print('nan loss')
             return 0
 
@@ -288,6 +303,32 @@ def sync(data):
             data[key] += data_list[i][key]
     return data
 
+
+def infoNCELoss(samples, labels):
+    batch_num = int(len(labels)/2)
+    label_uni = torch.unique(labels)
+    loss_tot = 0
+    for i in range(batch_num):
+        label = label_uni[i]
+        pos_pair = samples[labels==label]
+        neg_pairs = torch.cat([samples[0:1], samples[labels!=label]])
+
+        num = consine_similarity(pos_pair)
+        den = consine_similarity(neg_pairs)+num
+        loss = num/den
+        loss_tot = loss_tot + loss
+
+        print(i)
+        print(num)
+        print(den)
+    return -torch.log(loss_tot/batch_num)
+
+def consine_similarity(pair):
+    anchor = pair[0]
+    num = torch.sum(anchor * pair[1:], dim= 1)
+    den = torch.norm(anchor) * torch.norm(pair[1:], dim=1)
+
+    return torch.sum(num / den)
 
 if __name__ == "__main__":
     main()
