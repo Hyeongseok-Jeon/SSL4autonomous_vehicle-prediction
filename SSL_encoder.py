@@ -165,7 +165,6 @@ class Loss(nn.Module):
     def __init__(self, config):
         super(Loss, self).__init__()
         self.config = config
-        self.infoNCE = NTXentLoss()
 
     def forward(self, hid, data):
         if isinstance(hid[0], list):
@@ -182,11 +181,39 @@ class Loss(nn.Module):
         labels = torch.arange(2*batch_num)
         labels[anc_idx] = labels[pos_idx]
 
-        infoNCE_loss = self.infoNCE(samples, labels)
+        infoNCE_loss = infoNCELoss(samples, labels)
         if torch.isnan(infoNCE_loss):
             torch.save(data['file_name'],'error_data.pk')
         return infoNCE_loss
 
+def infoNCELoss(samples, labels):
+    batch_num = int(len(labels)/2)
+    label_uni = torch.unique(labels)
+    loss_tot = 0
+    for i in range(batch_num):
+        label = label_uni[i]
+        pos_pair = samples[labels==label]
+        neg_pairs = torch.cat([samples[0:1], samples[labels!=label]])
+
+        num = consine_similarity(pos_pair)
+        den = consine_similarity(neg_pairs)+num
+        loss = num/den
+        loss_tot = loss_tot + loss
+
+    return loss_tot
+
+def consine_similarity(pair):
+    num_samples = pair.shape[0]-1
+    achor = pair[0]
+    out = 0
+    for i in range(num_samples):
+        sample = pair[i+1]
+        num = torch.sum(achor * sample)
+        den = torch.norm(achor) * torch.norm(sample)
+        sim = num/den
+        out = out + sim
+
+    return out
 
 def get_model(base_model_name):
     base_model = import_module(base_model_name + '_backbone')
