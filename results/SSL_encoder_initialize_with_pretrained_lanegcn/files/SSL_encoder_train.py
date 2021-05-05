@@ -230,8 +230,10 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
             labels[anc_idx] = labels[pos_idx]
 
             infoNCE_loss = infoNCELoss(samples, labels)
-            torch.save(data_mem, 'error_data.pk')
-            torch.save(state_dict, 'error_state_dict.pk')
+            torch.save(data_mem[0], 'error_data_prev.pk')
+            torch.save(data_mem[1], 'error_data_cur.pk')
+            torch.save(state_dict[0], 'error_state_dict_prev.pk')
+            torch.save(state_dict[1], 'error_state_dict_cur.pk')
             print('nan loss')
             return 0
 
