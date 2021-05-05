@@ -21,7 +21,7 @@ from layers import Conv1d, Res1d, Linear, LinearRes, Null
 from numpy import float64, ndarray
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import time
-torch.autograd.detect_anomaly(True)
+
 
 file_path = os.path.abspath(__file__)
 # file_path = os.getcwd() + '/LaneGCN/lanegcn.py'
