@@ -199,7 +199,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
     for i, data in tqdm(enumerate(train_loader), disable=hvd.rank()):
         epoch += epoch_per_batch
         data = dict(data)
-        if len(data) < 2:
+        if len(data_mem) < 2:
             data_mem.append(data)
             state_dict.append(net.state_dict())
         else:
