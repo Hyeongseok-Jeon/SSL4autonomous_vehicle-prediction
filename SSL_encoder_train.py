@@ -221,8 +221,8 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
             labels[anc_idx] = labels[pos_idx]
 
             infoNCE_loss = infoNCELoss(samples, labels)
-            torch.save(data['file_name'], os.path.join(config_enc["save_dir"], 'error_file_name.pk'))
-            save_ckpt(net, opt, config_enc["save_dir"], epoch)
+            torch.save(data['file_name'], 'error_file_name.pk')
+            save_ckpt(net, opt, root_path, epoch)
             print('nan loss')
             return 0
 
