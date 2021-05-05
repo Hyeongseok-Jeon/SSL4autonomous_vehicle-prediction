@@ -36,9 +36,9 @@ config["val_iters"] = 205942 * 2
 config["save_freq"] = 1.0
 config["epoch"] = 0
 config["horovod"] = True
-config["opt"] = "sgd"
+config["opt"] = "adam"
 config["num_epochs"] = 50
-config["lr"] = [1e-3, 1e-4]
+config["lr"] = [1e-5, 1e-6]
 config["lr_epochs"] = [32]
 config["lr_func"] = StepLR(config["lr"], config["lr_epochs"])
 
