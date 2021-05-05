@@ -208,6 +208,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         batch_num = hid[0].shape[0]
         hid_positive = hid[0]
         hid_anchor = hid[1]
+        print(i)
         if torch.sum(torch.isnan(hid_positive)) > 0:
             print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
         if torch.sum(torch.isnan(hid_anchor)) > 0:
