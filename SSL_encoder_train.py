@@ -27,7 +27,6 @@ from torch.utils.data.distributed import DistributedSampler
 from LaneGCN.utils import Logger, load_pretrain
 
 from mpi4py import MPI
-torch.autograd.set_detect_anomaly(True)
 comm = MPI.COMM_WORLD
 hvd.init()
 torch.cuda.set_device(hvd.local_rank())
