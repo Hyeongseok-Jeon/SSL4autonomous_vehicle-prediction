@@ -120,8 +120,8 @@ class SSL_encoder(nn.Module):
                               num_channels=config_action_emb["num_channels"],
                               kernel_size=config_action_emb["kernel_size"],
                               dropout=config_action_emb["dropout"])
-        self.out = nn.Linear(config_action_emb["output_size"] * 2, config_action_emb["n_hid"]).double()
-        self.auxiliary = nn.Linear(config_action_emb["n_hid"], config_action_emb["n_hid"]).double()
+        self.out = nn.Linear(config_action_emb["output_size"] * 2, config_action_emb["n_hid"])
+        self.auxiliary = nn.Linear(config_action_emb["n_hid"], config_action_emb["n_hid"])
 
     def forward(self, data):
         actors, veh_in_batch = self.base_net(data)
