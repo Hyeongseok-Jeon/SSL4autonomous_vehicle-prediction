@@ -194,10 +194,19 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
     metrics = dict()
     loss_tot = 0
     loss_calc = 0
+    data_mem = []
+    state_dict = []
     for i, data in tqdm(enumerate(train_loader), disable=hvd.rank()):
         epoch += epoch_per_batch
         data = dict(data)
-
+        if len(data) < 2:
+            data_mem.append(data)
+            state_dict.append(net.state_dict())
+        else:
+            data_mem[0] = data_mem[1]
+            data_mem[1] = data
+            state_dict[0] = state_dict[1]
+            state_dict[1] = net.state_dict()
         output = net(data)
         loss_out = loss(output)
 
@@ -221,8 +230,8 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
             labels[anc_idx] = labels[pos_idx]
 
             infoNCE_loss = infoNCELoss(samples, labels)
-            torch.save(data, 'error_data.pk')
-            save_ckpt(net, opt, root_path, epoch)
+            torch.save(data_mem, 'error_data.pk')
+            torch.save(state_dict, 'error_state_dict.pk')
             print('nan loss')
             return 0
 
