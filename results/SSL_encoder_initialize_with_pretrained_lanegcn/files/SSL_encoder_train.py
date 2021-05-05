@@ -200,13 +200,13 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         epoch += epoch_per_batch
         data = dict(data)
         if len(data_mem) < 2:
-            data_mem.append(data)
-            state_dict.append(net.state_dict())
+            data_mem.append(data.copy())
+            state_dict.append(net.state_dict().copy())
         else:
-            data_mem[0] = data_mem[1]
-            data_mem[1] = data
-            state_dict[0] = state_dict[1]
-            state_dict[1] = net.state_dict()
+            data_mem[0] = data_mem[1].copy()
+            data_mem[1] = data.copy()
+            state_dict[0] = state_dict[1].copy()
+            state_dict[1] = net.state_dict().copy()
         output = net(data)
         loss_out = loss(output)
 
