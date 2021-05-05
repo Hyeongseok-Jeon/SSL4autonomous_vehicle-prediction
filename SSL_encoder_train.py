@@ -205,8 +205,6 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         loss_out.backward()
         loss_tot = loss_tot + loss_out.item()
         loss_calc = loss_calc + 1
-        lr = opt.step(epoch)
-
         if hvd.rank() == 0 and torch.isnan(loss_out):
             hid = output
             hid = hid[1]
@@ -223,8 +221,12 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
             labels[anc_idx] = labels[pos_idx]
 
             infoNCE_loss = infoNCELoss(samples, labels)
+            torch.save(data['file_name'], os.path.join(config_enc["save_dir"], 'error_file_name.pk'))
+            save_ckpt(net, opt, config_enc["save_dir"], epoch)
             print('nan loss')
             return 0
+
+        lr = opt.step(epoch)
 
         num_iters = int(np.round(epoch * num_batches))
         if hvd.rank() == 0 and (
