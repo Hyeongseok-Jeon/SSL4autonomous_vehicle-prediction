@@ -112,6 +112,8 @@ class SSL_encoder(nn.Module):
     def __init__(self, config, base_model):
         super(SSL_encoder, self).__init__()
         self.relu6 = nn.ReLU6()
+        self.relu = nn.ReLU()
+        self.tanh = nn.Tanh()
         self.base_net = base_model.Net(config)
         self.action_emb = TCN(input_size=102,
                               output_size=config_action_emb["output_size"],
@@ -145,7 +147,7 @@ class SSL_encoder(nn.Module):
         anchor_sample = sample_original
 
         samples = torch.cat([positive_samples, anchor_sample])
-        hid_tmp = self.relu6(self.out(samples))
+        hid_tmp = self.tanh(self.out(samples))
         hid_positive = torch.cat([hid_tmp[i].unsqueeze(0) for i in range(batch_num)])
         hid_anchor = torch.cat([hid_tmp[i + batch_num].unsqueeze(0) for i in range(batch_num)])
         if config_enc['auxiliary']:
