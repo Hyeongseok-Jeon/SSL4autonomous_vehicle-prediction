@@ -202,7 +202,6 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         output = net(data)
         loss_out = loss(output)
 
-        if torch.isnan(loss_out):
         hid = output
         hid = hid[1]
 
