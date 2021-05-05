@@ -233,27 +233,21 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         ):
             save_ckpt(net, opt, config_enc["save_dir"], epoch)
 
-        if num_iters % display_iters == 0:
-            dt = time.time() - start_time
-            if hvd.rank() == 0:
-                print(
-                    "epoch = %2.4f,  infoNCE loss  = %2.4f, time = %2.4f"
-                    % (epoch, loss_tot / loss_calc, dt)
-                )
-            start_time = time.time()
-            loss_tot = 0
-            loss_calc = 0
-
         if num_iters % val_iters == 0:
             val(config, config_enc, val_loader, net, loss, epoch)
 
         if epoch >= config["num_epochs"]:
             val(config, config_enc, val_loader, net, loss, epoch)
+    dt = time.time() - start_time
+    if hvd.rank() == 0:
+        print(
+            "epoch = %2.4f,  infoNCE loss  = %2.4f, time = %2.4f"
+            % (epoch, loss_tot / loss_calc, dt)
+        )
     return 1
 
 def val(config, config_enc, data_loader, net, loss, epoch):
     net.eval()
-
     start_time = time.time()
     loss_tot = 0
     loss_calc = 0
