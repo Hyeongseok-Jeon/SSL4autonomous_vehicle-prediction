@@ -106,7 +106,7 @@ class TCN(nn.Module):
         output = self.tcn(x.transpose(1, 2)).transpose(1, 2)
         # output = self.linear(output).double()
         # return self.sig(output)
-        return output
+        return output.double
 
 class SSL_encoder(nn.Module):
     def __init__(self, config, base_model):
