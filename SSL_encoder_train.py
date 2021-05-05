@@ -202,23 +202,19 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         output = net(data)
         loss_out = loss(output)
 
-        opt.zero_grad()
-        loss_out.backward()
-        loss_tot = loss_tot + loss_out.item()
-        loss_calc = loss_calc + 1
-        lr = opt.step(epoch)
+        if torch.isnan(loss_out):
+        hid = output
+        hid = hid[1]
+
+        batch_num = hid[0].shape[0]
+        hid_positive = hid[0]
+        hid_anchor = hid[1]
+        if torch.sum(torch.isnan(hid_positive)) > 0:
+            print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+        if torch.sum(torch.isnan(hid_anchor)) > 0:
+            print('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')
 
         if torch.isnan(loss_out):
-            hid = output
-            hid = hid[1]
-
-            batch_num = hid[0].shape[0]
-            hid_positive = hid[0]
-            hid_anchor = hid[1]
-            if torch.sum(torch.isnan(hid_positive)) > 0:
-                print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
-            if torch.sum(torch.isnan(hid_anchor)) > 0:
-                print('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')
             samples = torch.zeros_like(torch.cat([hid_anchor, hid_positive]))
             anc_idx = torch.arange(batch_num) * 2
             pos_idx = torch.arange(batch_num) * 2 + 1
@@ -230,6 +226,12 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
             infoNCE_loss = infoNCELoss(samples, labels)
             print('nan loss')
             return 0
+
+        opt.zero_grad()
+        loss_out.backward()
+        loss_tot = loss_tot + loss_out.item()
+        loss_calc = loss_calc + 1
+        lr = opt.step(epoch)
 
         num_iters = int(np.round(epoch * num_batches))
         if hvd.rank() == 0 and (
