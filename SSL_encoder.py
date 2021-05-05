@@ -117,7 +117,7 @@ class SSL_encoder(nn.Module):
                               output_size=config_action_emb["output_size"],
                               num_channels=config_action_emb["num_channels"],
                               kernel_size=config_action_emb["kernel_size"],
-                              dropout=config_action_emb["dropout"]).cuda()
+                              dropout=config_action_emb["dropout"])
         self.out = nn.Linear(config_action_emb["output_size"] * 2, config_action_emb["n_hid"]).double()
         self.auxiliary = nn.Linear(config_action_emb["n_hid"], config_action_emb["n_hid"]).double()
 

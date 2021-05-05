@@ -23,13 +23,11 @@ from torch.utils.data import Sampler, DataLoader
 import horovod.torch as hvd
 import pickle
 
-
 from torch.utils.data.distributed import DistributedSampler
 
 from LaneGCN.utils import Logger, load_pretrain
 
 from mpi4py import MPI
-
 
 comm = MPI.COMM_WORLD
 hvd.init()
@@ -49,6 +47,7 @@ parser.add_argument(
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
 
+
 def main():
     seed = hvd.rank()
     torch.manual_seed(seed)
@@ -62,20 +61,20 @@ def main():
     config, config_enc, Dataset, collate_fn, net, loss, opt = model.get_model(args.base_model)
 
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=True)
-    train_sampler = DistributedSampler(
-        dataset, num_replicas=hvd.size(), rank=hvd.rank()
-    )
-    train_loader = DataLoader(
-        dataset,
-        batch_size=config["batch_size"],
-        num_workers=config["workers"],
-        sampler=train_sampler,
-        collate_fn=collate_fn,
-        pin_memory=True,
-        worker_init_fn=worker_init_fn,
-        drop_last=True,
-    )
+    # dataset = Dataset(config["train_split"], config, train=True)
+    # train_sampler = DistributedSampler(
+    #     dataset, num_replicas=hvd.size(), rank=hvd.rank()
+    # )
+    # train_loader = DataLoader(
+    #     dataset,
+    #     batch_size=config["batch_size"],
+    #     num_workers=config["workers"],
+    #     sampler=train_sampler,
+    #     collate_fn=collate_fn,
+    #     pin_memory=True,
+    #     worker_init_fn=worker_init_fn,
+    #     drop_last=True,
+    # )
 
     # Data loader for evaluation
     dataset = Dataset(config["val_split"], config, train=False)
@@ -89,8 +88,7 @@ def main():
         pin_memory=True,
     )
 
-
-    train_mod(config, train_loader)
+    # train_mod(config, train_loader)
     val_mod(config, val_loader)
 
 
@@ -105,23 +103,27 @@ def train_mod(config, train_loader):
     store = train_loader.dataset.split
     get_idx = []
     for i in range(len(store)):
-        if not(store[i]['action'] == 'error'):
-            get_idx.append(i)
+        if not (store[i]['action'] == 'error'):
+            if not (np.sum(np.isnan(store[i]['ego_aug']['traj'])) > 0):
+                get_idx.append(i)
     new_store = [store[i] for i in get_idx]
-    f = open(os.path.join(root_path, 'preprocess', config['preprocess_train'][:-2]+'_mod.p'), 'wb')
+    f = open(os.path.join(root_path, 'preprocess', config['preprocess_train']), 'wb')
     pickle.dump(new_store, f, protocol=pickle.HIGHEST_PROTOCOL)
     f.close()
+
 
 def val_mod(config, val_loader):
     store = val_loader.dataset.split
     get_idx = []
     for i in range(len(store)):
-        if not(store[i]['action'] == 'error'):
-            get_idx.append(i)
+        if not (store[i]['action'] == 'error'):
+            if not (np.sum(np.isnan(store[i]['ego_aug']['traj'])) > 0):
+                get_idx.append(i)
     new_store = [store[i] for i in get_idx]
-    f = open(os.path.join(root_path, 'preprocess', config['preprocess_val'][:-2]+'_mod.p'), 'wb')
+    f = open(os.path.join(root_path, 'preprocess', config['preprocess_val'][:-2]), 'wb')
     pickle.dump(new_store, f, protocol=pickle.HIGHEST_PROTOCOL)
     f.close()
+
 
 if __name__ == "__main__":
     main()
