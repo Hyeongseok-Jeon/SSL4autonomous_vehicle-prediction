@@ -249,8 +249,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
 
         if epoch >= config["num_epochs"]:
             val(config, config_enc, val_loader, net, loss, epoch)
-            return 1
-
+    return 1
 
 def val(config, config_enc, data_loader, net, loss, epoch):
     net.eval()
