@@ -104,9 +104,9 @@ class TCN(nn.Module):
     def forward(self, x):
         # x needs to have dimension (N, C, L) in order to be passed into CNN
         output = self.tcn(x.transpose(1, 2)).transpose(1, 2)
-        # output = self.linear(output).double()
-        # return self.sig(output)
-        return output.double
+        output = self.linear(output)
+        return self.sig(output)
+
 
 class SSL_encoder(nn.Module):
     def __init__(self, config, base_model):
