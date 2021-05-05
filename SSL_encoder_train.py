@@ -208,7 +208,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         loss_calc = loss_calc + 1
         lr = opt.step(epoch)
 
-        if torch.isnan(loss_out):
+        if hvd.rank() == 0 and torch.isnan(loss_out):
             hid = output
             hid = hid[1]
 
@@ -237,8 +237,8 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
             dt = time.time() - start_time
             if hvd.rank() == 0:
                 print(
-                    "infoNCE loss  = %2.4f, time = %2.4f"
-                    % (loss_tot / loss_calc, dt)
+                    "epoch = %2.4f,  infoNCE loss  = %2.4f, time = %2.4f"
+                    % (epoch, loss_tot / loss_calc, dt)
                 )
             start_time = time.time()
             loss_tot = 0
@@ -267,8 +267,8 @@ def val(config, config_enc, data_loader, net, loss, epoch):
     dt = time.time() - start_time
     if hvd.rank() == 0:
         print(
-            "validation infoNCE loss  = %2.4f, time = %2.4f"
-            % (loss_tot / loss_calc, dt)
+            "epoch = %2.4f, validation infoNCE loss  = %2.4f, time = %2.4f"
+            % (epoch, loss_tot / loss_calc, dt)
         )
     net.train()
 
