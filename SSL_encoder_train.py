@@ -56,7 +56,12 @@ parser.add_argument(
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
 
-
+'''
+data_prev = torch.load('error_data_prev.pk', map_location = torch.device('cuda'))
+data_cur = torch.load('error_data_cur.pk', map_location = torch.device('cuda'))
+state_dict_prev = torch.load('error_state_dict_prev.pk', map_location = torch.device('cuda'))
+state_dict_cur = torch.load('error_state_dict_cur.pk', map_location = torch.device('cuda'))
+'''
 def main():
     seed = hvd.rank()
     torch.manual_seed(seed)
@@ -181,7 +186,7 @@ def worker_init_fn(pid):
 def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=None):
     train_loader.sampler.set_epoch(int(epoch))
     net.train()
-
+    net.base_net.eval()
     num_batches = len(train_loader)
     epoch_per_batch = 1.0 / num_batches
     save_iters = int(np.ceil(config["save_freq"] * num_batches))
@@ -194,19 +199,9 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
     metrics = dict()
     loss_tot = 0
     loss_calc = 0
-    data_mem = []
-    state_dict = []
     for i, data in tqdm(enumerate(train_loader), disable=hvd.rank()):
         epoch += epoch_per_batch
         data = dict(data)
-        if len(data_mem) < 2:
-            data_mem.append(data.copy())
-            state_dict.append(net.state_dict().copy())
-        else:
-            data_mem[0] = data_mem[1].copy()
-            data_mem[1] = data.copy()
-            state_dict[0] = state_dict[1].copy()
-            state_dict[1] = net.state_dict().copy()
         output = net(data)
         loss_out = loss(output)
 
@@ -230,10 +225,9 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
             labels[anc_idx] = labels[pos_idx]
 
             infoNCE_loss = infoNCELoss(samples, labels)
-            torch.save(data_mem[0], 'error_data_prev.pk')
-            torch.save(data_mem[1], 'error_data_cur.pk')
-            torch.save(state_dict[0], 'error_state_dict_prev.pk')
-            torch.save(state_dict[1], 'error_state_dict_cur.pk')
+            torch.save(data, 'error_data.pk')
+            save_ckpt(net, opt, root_path, epoch)
+
             print('nan loss')
             return 0
 
