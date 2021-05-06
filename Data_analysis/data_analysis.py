@@ -99,7 +99,8 @@ def get_min_dist(data):
     min_dist = []
     for i in range(ego_traj.shape[0]):
         ego_pos = ego_traj[i]
-        min_dist.append(np.min(np.linalg.norm(ego_pos - sur_traj, axis=1)))
+        sur_pos = sur_traj[i]
+        min_dist.append(np.linalg.norm(ego_pos - sur_pos))
     return min(min_dist)
 
 
