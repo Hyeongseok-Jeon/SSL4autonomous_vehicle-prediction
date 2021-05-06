@@ -241,7 +241,6 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
             torch.save(data, 'error_data.pk')
             save_ckpt(net, opt, root_path, epoch)
             print('nan loss')
-            return 0
 
         lr = opt.step(epoch)
 
