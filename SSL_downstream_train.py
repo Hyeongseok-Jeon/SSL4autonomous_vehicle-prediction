@@ -265,3 +265,5 @@ def sync(data):
 
 if __name__ == "__main__":
     main()
+
+# TODO: make downstream be linear
