@@ -19,8 +19,8 @@ config_enc = dict()
 config_action_emb = dict()
 """Train"""
 config_action_emb["output_size"] = 128
-config_action_emb["num_channels"] = [128, 128, 128]
-config_action_emb["kernel_size"] = 5
+config_action_emb["num_channels"] = [128, 128, 128, 128]
+config_action_emb["kernel_size"] = 2
 config_action_emb["dropout"] = 0.2
 config_action_emb["n_hid"] = 128
 config_enc['action_emb'] = config_action_emb
@@ -166,6 +166,7 @@ class Loss(nn.Module):
     def __init__(self, config):
         super(Loss, self).__init__()
         self.config = config
+        self.cos_sim = nn.CosineSimilarity(dim=1)
 
     def forward(self, hid):
         if isinstance(hid[0], list):
@@ -174,43 +175,29 @@ class Loss(nn.Module):
         hid_positive = hid[0]
         hid_anchor = hid[1]
 
-        samples = torch.zeros_like(torch.cat([hid_anchor, hid_positive]))
-        anc_idx = torch.arange(batch_num) * 2
-        pos_idx = torch.arange(batch_num) * 2 + 1
-        samples[anc_idx] = hid_anchor
-        samples[pos_idx] = hid_positive
-        labels = torch.arange(2 * batch_num)
-        labels[anc_idx] = labels[pos_idx]
+        anchor_batch = torch.repeat_interleave(hid_anchor,batch_num, dim=0)
+        sample_batch = torch.cat([torch.cat([hid_positive[i:i+1], torch.cat([hid_positive[:i,:], hid_positive[i+1:,:]])]) for i in range(batch_num)])
+        cos_sim_out = self.cos_sim(anchor_batch, sample_batch)
+        cos_sim_out = 1-torch.acos(cos_sim_out)/np.pi
+        loss_tot = 0
+        for i in range(batch_num):
+            num = cos_sim_out[batch_num*i]
+            den = sum(cos_sim_out[batch_num*i+1 : batch_num*(i+1)]) + num
+            loss_batch = -torch.log(num/den)
+            loss_tot = loss_tot + loss_batch
+        loss_out = loss_tot/batch_num
+        # samples = torch.zeros_like(torch.cat([hid_anchor, hid_positive]))
+        # anc_idx = torch.arange(batch_num) * 2
+        # pos_idx = torch.arange(batch_num) * 2 + 1
+        # samples[anc_idx] = hid_anchor
+        # samples[pos_idx] = hid_positive
+        # labels = torch.arange(2 * batch_num)
+        # labels[anc_idx] = labels[pos_idx]
 
-        infoNCE_loss = infoNCELoss(samples, labels)
+        # infoNCE_loss = infoNCELoss(samples, labels)
+        # infoNCE_loss = self.l1loss(hid_anchor, hid_positive)
+        return loss_out
 
-        return infoNCE_loss
-
-
-def infoNCELoss(samples, labels):
-    batch_num = int(len(labels) / 2)
-    label_uni = torch.unique(labels)
-    loss_tot = 0
-    for i in range(batch_num):
-        label = label_uni[i]
-        pos_pair = samples[labels == label]
-        neg_pairs = torch.cat([pos_pair[0:1], samples[labels != label]])
-
-        num = consine_similarity(pos_pair)
-        den = consine_similarity(neg_pairs) + num
-        loss = num / den
-        loss_tot = loss_tot + loss
-
-    return -torch.log(loss_tot / batch_num)
-
-
-def consine_similarity(pair):
-    num = torch.sum(pair[0:1] * pair[1:], dim=1)
-    den = torch.norm(pair[0:1]) * torch.norm(pair[1:], dim=1)
-    sim = num / den
-    sim = torch.clamp(sim, -1, 1)
-
-    return torch.sum(1 - (torch.arccos(sim) / np.pi))
 
 
 def get_model(base_model_name):
@@ -231,7 +218,15 @@ def get_model(base_model_name):
     encoder = encoder.cuda()
     loss = Loss(config).cuda()
 
-    params = encoder.parameters()
+    params_wrap = [(name, param) for name, param in encoder.action_emb.named_parameters()]
+    params_out = [(name, param) for name, param in encoder.out.named_parameters()]
+    params_aux = [(name, param) for name, param in encoder.auxiliary.named_parameters()]
+
+    params_wrap = [p for n, p in params_wrap]
+    params_out = [p for n, p in params_out]
+    params_aux = [p for n, p in params_aux]
+
+    params = params_wrap + params_aux + params_out
     opt = Optimizer(params, config)
 
     return config, config_enc, Dataset, collate_fn, encoder, loss, opt
