@@ -1,4 +1,3 @@
-file name,ego maneuver,ego augmented maneuver,target maneuver,minimum distance btw ego and target
 1.csv,go_straight,['left'],go_straight,5.8297276
 10.csv,go_straight,"['accelerate', 'left_brake']",0,16.951763
 100.csv,go_straight,['right'],go_straight,13.349514

@@ -52,15 +52,15 @@ def main():
     config['val_data_analysis'] = 'Data_analysis/val_data.csv'
     config['train_data_analysis'] = 'Data_analysis/train_data.csv'
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=True)
-    train_loader = DataLoader(
-        dataset,
-        batch_size=1,
-        num_workers=config["workers"],
-        collate_fn=collate_fn,
-        pin_memory=True,
-        drop_last=True,
-    )
+    # dataset = Dataset(config["train_split"], config, train=True)
+    # train_loader = DataLoader(
+    #     dataset,
+    #     batch_size=1,
+    #     num_workers=config["workers"],
+    #     collate_fn=collate_fn,
+    #     pin_memory=True,
+    #     drop_last=True,
+    # )
 
     # Data loader for evaluation
     dataset = Dataset(config["val_split"], config, train=False)
@@ -72,7 +72,7 @@ def main():
         pin_memory=True,
     )
 
-    data_anal(train_loader, config['train_data_analysis'])
+    # data_anal(train_loader, config['train_data_analysis'])
     data_anal(val_loader, config['val_data_analysis'])
 
 
