@@ -1,0 +1,28 @@
+logging directory :  /home/user/data/HyeongseokJeon/SSL4autonomous_vehicle-prediction/results/SSL_encoder_initialize_with_pretrained_lanegcn_and_freeze
+epoch = 1.0000,  infoNCE loss  = 0.0649, time = 451.0540
+epoch = 2.0000,  infoNCE loss  = 0.0415, time = 467.3413
+epoch = 2.0020, validation infoNCE loss  = 0.0419, time = 46.3000
+epoch = 3.0000,  infoNCE loss  = 0.0374, time = 505.8229
+epoch = 4.0000,  infoNCE loss  = 0.0354, time = 467.0036
+epoch = 4.0041, validation infoNCE loss  = 0.0374, time = 46.5466
+epoch = 5.0000,  infoNCE loss  = 0.0342, time = 512.3908
+epoch = 6.0000,  infoNCE loss  = 0.0335, time = 464.4754
+epoch = 6.0061, validation infoNCE loss  = 0.0364, time = 46.5377
+epoch = 7.0000,  infoNCE loss  = 0.0327, time = 507.5488
+epoch = 8.0000,  infoNCE loss  = 0.0322, time = 469.6173
+epoch = 8.0081, validation infoNCE loss  = 0.0353, time = 46.4720
+epoch = 9.0000,  infoNCE loss  = 0.0316, time = 511.9960
+epoch = 10.0000,  infoNCE loss  = 0.0313, time = 455.2308
+epoch = 10.0101, validation infoNCE loss  = 0.0340, time = 46.6142
+epoch = 11.0000,  infoNCE loss  = 0.0308, time = 509.4997
+epoch = 12.0000,  infoNCE loss  = 0.0306, time = 467.1090
+epoch = 12.0122, validation infoNCE loss  = 0.0341, time = 46.6951
+epoch = 13.0000,  infoNCE loss  = 0.0301, time = 501.9746
+epoch = 14.0000,  infoNCE loss  = 0.0299, time = 465.5736
+epoch = 14.0142, validation infoNCE loss  = 0.0343, time = 47.2658
+epoch = 15.0000,  infoNCE loss  = 0.0297, time = 511.8964
+epoch = 16.0000,  infoNCE loss  = 0.0294, time = 468.1377
+epoch = 16.0162, validation infoNCE loss  = 0.0321, time = 46.6032
+epoch = 17.0000,  infoNCE loss  = 0.0292, time = 510.3938
+epoch = 18.0000,  infoNCE loss  = 0.0289, time = 466.6375
+epoch = 18.0183, validation infoNCE loss  = 0.0319, time = 44.9466
