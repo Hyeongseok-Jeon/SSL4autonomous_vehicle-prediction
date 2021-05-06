@@ -43,7 +43,7 @@ parser.add_argument(
     "--base_model", default="LaneGCN.lanegcn", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument(
-    "--memo", default="_initialize_with_pretrained_lanegcn"
+    "--memo", default="_initialize_with_pretrained_lanegcn_and_freeze"
 )
 parser.add_argument("--eval", action="store_true")
 parser.add_argument(
