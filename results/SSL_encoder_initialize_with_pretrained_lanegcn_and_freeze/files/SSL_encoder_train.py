@@ -62,6 +62,8 @@ data_cur = torch.load('error_data_cur.pk', map_location = torch.device('cuda'))
 state_dict_prev = torch.load('error_state_dict_prev.pk', map_location = torch.device('cuda'))
 state_dict_cur = torch.load('error_state_dict_cur.pk', map_location = torch.device('cuda'))
 '''
+torch.autograd.set_detect_anomaly(True)
+
 def main():
     seed = hvd.rank()
     torch.manual_seed(seed)
@@ -239,7 +241,6 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
             torch.save(data, 'error_data.pk')
             save_ckpt(net, opt, root_path, epoch)
             print('nan loss')
-            return 0
 
         lr = opt.step(epoch)
 

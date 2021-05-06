@@ -167,6 +167,7 @@ class Loss(nn.Module):
         super(Loss, self).__init__()
         self.config = config
         self.cos_sim = nn.CosineSimilarity(dim=1)
+        self.infonce = nn.CosineEmbeddingLoss()
 
     def forward(self, hid):
         if isinstance(hid[0], list):
@@ -177,15 +178,22 @@ class Loss(nn.Module):
 
         anchor_batch = torch.repeat_interleave(hid_anchor,batch_num, dim=0)
         sample_batch = torch.cat([torch.cat([hid_positive[i:i+1], torch.cat([hid_positive[:i,:], hid_positive[i+1:,:]])]) for i in range(batch_num)])
-        cos_sim_out = self.cos_sim(anchor_batch, sample_batch)
-        cos_sim_out = 1-torch.acos(cos_sim_out)/np.pi
-        loss_tot = 0
+        idx = -torch.ones_like(anchor_batch[:,0])
         for i in range(batch_num):
-            num = cos_sim_out[batch_num*i]
-            den = sum(cos_sim_out[batch_num*i+1 : batch_num*(i+1)]) + num
-            loss_batch = -torch.log(num/den)
-            loss_tot = loss_tot + loss_batch
-        loss_out = loss_tot/batch_num
+            idx[batch_num*i] = 1
+
+        loss_out = self.infonce(anchor_batch, sample_batch, idx)
+
+        #
+        # cos_sim_out = cos_sim(anchor_batch, sample_batch)
+        # cos_sim_out = 1-torch.acos(cos_sim_out)/np.pi
+        # loss_tot = 0
+        # for i in range(batch_num):
+        #     num = cos_sim_out[batch_num*i]
+        #     den = sum(cos_sim_out[batch_num*i+1 : batch_num*(i+1)]) + num
+        #     loss_batch = -torch.log(num/den)
+        #     loss_tot = loss_tot + loss_batch
+        # loss_out = loss_tot/batch_num
         # samples = torch.zeros_like(torch.cat([hid_anchor, hid_positive]))
         # anc_idx = torch.arange(batch_num) * 2
         # pos_idx = torch.arange(batch_num) * 2 + 1
