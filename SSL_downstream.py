@@ -10,18 +10,6 @@ from fractions import gcd
 from LaneGCN.data import ArgoDataset
 from LaneGCN.utils import Optimizer
 
-class downstream_net(nn.Module):
-    def __init__(self, config, net):
-        super(downstream_net, self).__init__()
-        self.encoder = net
-        self.pred_net = PredNet(config)
-
-    def forward(self, data):
-        with torch.no_grad():
-            actors = self.encoder(data)
-        out = self.pred_net(actors)
-        return out
-
 
 class PredNet(nn.Module):
     """
@@ -188,22 +176,74 @@ class AttDest(nn.Module):
         return agts
 
 
-def get_model(base_model_name):
-    base_model = import_module(base_model_name + '_backbone')
-    config, Dataset, collate_fn, _, loss, post_process, _ = base_model.get_model()
-    encoder = import_module('SSL_encoder')
-    _, config_enc, _, _, net, _, _ = encoder.get_model(base_model_name)
+def actor_gather(actors: List[Tensor]) -> Tuple[Tensor, List[Tensor]]:
+    batch_size = len(actors)
+    num_actors = [len(x) for x in actors]
 
+    actors = [x.transpose(1, 2) for x in actors]
+    actors = torch.cat(actors, 0)
+
+    actor_idcs = []
+    count = 0
+    for i in range(batch_size):
+        idcs = torch.arange(count, count + num_actors[i]).to(actors.device)
+        actor_idcs.append(idcs)
+        count += num_actors[i]
+    return actors, actor_idcs
+
+
+class downstream_net(nn.Module):
+    def __init__(self, config, enc_net):
+        super(downstream_net, self).__init__()
+        self.encoder = enc_net
+        self.pred_net = PredNet(config)
+
+    def forward(self, data):
+        with torch.no_grad():
+            actors = self.encoder(data)
+        if isinstance(actors[0], list):
+            actors = actors[0]
+        actors = actors[1]
+        batch_num = len(data['city'])
+        actor_idcs = []
+        count = 0
+        for i in range(batch_num):
+            idcs = torch.arange(count, count + 1).to(actors.device)
+            actor_idcs.append(idcs)
+            count += 1
+
+        actor_ctrs = [gpu(data["ctrs"])[i][1:2,:] for i in range(batch_num)]
+
+
+        out = self.pred_net(actors, actor_idcs, actor_ctrs)
+        rot, orig = gpu(data["rot"]), gpu(data["orig"])
+        # transform prediction to world coordinates
+        for i in range(len(out["reg"])):
+            out["reg"][i] = torch.matmul(out["reg"][i], rot[i]) + orig[i].view(
+                1, 1, 1, -1
+            )
+
+        return out
+
+def get_model(args):
+    encoder_name = args.encoder
+    base_model_name = args.base_model
+    base_model = import_module(base_model_name+ '_backbone')
+    encoder = import_module(encoder_name)
+
+    config, config_enc, Dataset, collate_fn, enc_net, _, _ = encoder.get_model(base_model_name)
+    _, _, _, _, loss, post_process, opt = base_model.get_model()
     pre_trained_weight = torch.load(config_enc['pre_trained_weight'])
-    net.load_state_dict(pre_trained_weight["state_dict"])
-    net.eval()
+    enc_net.load_state_dict(pre_trained_weight["state_dict"])
 
-    model = downstream_net(config, net)
+    model = downstream_net(config, enc_net)
     model = model.cuda()
 
-    params = model.parameters()
-    opt = Optimizer(params, config)
+    params_pred = [(name, param) for name, param in model.pred_net.named_parameters()]
+    params_pred = [p for n, p in params_pred]
 
-    return config, ArgoDataset, collate_fn, model, loss, post_process, opt
+    opt = Optimizer(params_pred, config)
+
+    return config, config_enc, Dataset, collate_fn, model, loss, opt, post_process
 
 # TODO: diable auxiliary in encoder

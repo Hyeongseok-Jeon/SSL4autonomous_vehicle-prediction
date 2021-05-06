@@ -26,7 +26,7 @@ config_action_emb["n_hid"] = 128
 config_enc['action_emb'] = config_action_emb
 config_enc['auxiliary'] = True
 config_enc['pre_trained'] = True
-config_enc['pre_trained_weight'] = os.path.join(root_path, 'results', 'SSL_encoder', '0.000.ckpt')
+config_enc['pre_trained_weight'] = os.path.join(root_path, 'results', 'SSL_encoder_initialize_with_pretrained_lanegcn_and_freeze', '18.000.ckpt')
 
 if "save_dir" not in config_enc:
     config_enc["save_dir"] = os.path.join(

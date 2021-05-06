@@ -51,8 +51,8 @@ if "save_dir" not in config:
 if not os.path.isabs(config["save_dir"]):
     config["save_dir"] = os.path.join(root_path, "results", config["save_dir"])
 
-config["batch_size"] = 96
-config["val_batch_size"] = 96
+config["batch_size"] = 8
+config["val_batch_size"] = 8
 config["workers"] = 0
 config["val_workers"] = config["workers"]
 
@@ -748,7 +748,8 @@ class Loss(nn.Module):
         self.pred_loss = PredLoss(config)
 
     def forward(self, out: Dict, data: Dict) -> Dict:
-        loss_out = self.pred_loss(out, gpu(data["gt_preds"]), gpu(data["has_preds"]))
+        batch_num = len(data['city'])
+        loss_out = self.pred_loss(out, gpu([data["gt_preds"][i][1:2] for i in range(batch_num)]), gpu([data["has_preds"][i][1:2] for i in range(batch_num)]))
         loss_out["loss"] = loss_out["cls_loss"] / (
             loss_out["num_cls"] + 1e-10
         ) + loss_out["reg_loss"] / (loss_out["num_reg"] + 1e-10)

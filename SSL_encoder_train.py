@@ -248,7 +248,7 @@ def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=No
         if hvd.rank() == 0 and (
                 num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
-            save_ckpt(net, opt, config_enc["save_dir"], epoch)
+            save_ckpt(net, opt, save_dir, epoch)
 
         if num_iters % val_iters == 0:
             val(config, config_enc, val_loader, net, loss, epoch)
