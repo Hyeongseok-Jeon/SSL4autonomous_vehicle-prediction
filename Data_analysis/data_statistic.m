@@ -99,5 +99,5 @@ text(xtips2,ytips2,labels2,'HorizontalAlignment','center',...
 title("target vehicle's maneuver distribution")
 
 
-ego_num_GS + ego_num_LLC + ego_num_RLC + ego_num_RightTurn + ego_num_LeftTurn + ego_num_NA + ego_num_0
-sur_num_GS + sur_num_LLC + sur_num_RLC + sur_num_RightTurn + sur_num_LeftTurn + sur_num_NA + sur_num_0
+ego_num_GS + ego_num_LLC + ego_num_RLC + ego_num_RightTurn + ego_num_LeftTurn + ego_num_NA + ego_num_0;
+sur_num_GS + sur_num_LLC + sur_num_RLC + sur_num_RightTurn + sur_num_LeftTurn + sur_num_NA + sur_num_0;

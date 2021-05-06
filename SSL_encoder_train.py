@@ -62,7 +62,7 @@ data_cur = torch.load('error_data_cur.pk', map_location = torch.device('cuda'))
 state_dict_prev = torch.load('error_state_dict_prev.pk', map_location = torch.device('cuda'))
 state_dict_cur = torch.load('error_state_dict_cur.pk', map_location = torch.device('cuda'))
 '''
-torch.autograd.set_detect_anomaly(True)
+# torch.autograd.set_detect_anomaly(True)
 
 def main():
     seed = hvd.rank()
