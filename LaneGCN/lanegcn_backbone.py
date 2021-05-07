@@ -816,7 +816,7 @@ class PostProcess(nn.Module):
 
 
 def pred_metrics(preds, gt_preds, has_preds):
-    assert has_preds.all()
+    # assert has_preds.all()
     preds = np.asarray(preds, np.float32)
     gt_preds = np.asarray(gt_preds, np.float32)
 
