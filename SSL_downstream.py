@@ -199,8 +199,9 @@ class downstream_net(nn.Module):
         self.pred_net = PredNet(config)
 
     def forward(self, data):
-        with torch.no_grad():
-            actors = self.encoder(data)
+        # with torch.no_grad():
+        #     actors = self.encoder(data)
+        actors = self.encoder(data)
         if isinstance(actors[0], list):
             actors = actors[0]
         actors = actors[1]
