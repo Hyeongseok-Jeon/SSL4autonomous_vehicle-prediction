@@ -353,52 +353,54 @@ class ArgoDataset(Dataset):
                 regen_trial = regen_trial + 1
                 idx_cand = np.random.randint(len(val_idx))
                 aus_pos_cand = final_pos_cands[val_idx[idx_cand]]
-                closest_lane_obj_aug, _, _, _, _ = am.get_nearest_centerline(aus_pos_cand, data['city'], visualize=False)
-                if closest_lane_obj_aug.id in seg_lists:
-                    if closest_lane_obj_aug.l_neighbor_id is not None:
-                        if closest_lane_obj_aug.l_neighbor_id == closest_lane_obj.id and regen_check[0] == 0:
-                            ego_aug['relation'].append('right')
-                            aug_pos.append(aus_pos_cand)
-                            regen_check[0] = 1
-                    if closest_lane_obj_aug.r_neighbor_id is not None:
-                        if closest_lane_obj_aug.r_neighbor_id == closest_lane_obj.id and regen_check[1] == 0:
-                            ego_aug['relation'].append('left')
-                            aug_pos.append(aus_pos_cand)
-                            regen_check[1] = 1
-                    if closest_lane_obj_aug.successors is not None:
-                        if closest_lane_obj.id in closest_lane_obj_aug.successors and regen_check[2] == 0:
-                            ego_aug['relation'].append('brake')
-                            aug_pos.append(aus_pos_cand)
-                            regen_check[2] = 1
-                    if closest_lane_obj_aug.predecessors is not None:
-                        if closest_lane_obj.id in closest_lane_obj_aug.predecessors and regen_check[3] == 0:
-                            ego_aug['relation'].append('accelerate')
-                            aug_pos.append(aus_pos_cand)
-                            regen_check[3] = 1
-                    if closest_lane_obj_aug.successors is not None and closest_lane_obj.l_neighbor_id is not None:
-                        if closest_lane_obj.l_neighbor_id in closest_lane_obj_aug.successors and regen_check[4] == 0:
-                            ego_aug['relation'].append('left_brake')
-                            aug_pos.append(aus_pos_cand)
-                            regen_check[4] = 1
-                    if closest_lane_obj_aug.predecessors is not None and closest_lane_obj.l_neighbor_id is not None:
-                        if closest_lane_obj.l_neighbor_id in closest_lane_obj_aug.predecessors and regen_check[5] == 0:
-                            ego_aug['relation'].append('left_accelerate')
-                            aug_pos.append(aus_pos_cand)
-                            regen_check[5] = 1
-                    if closest_lane_obj_aug.successors is not None and closest_lane_obj.r_neighbor_id is not None:
-                        if closest_lane_obj.r_neighbor_id in closest_lane_obj_aug.successors and regen_check[6] == 0:
-                            ego_aug['relation'].append('right_brake')
-                            aug_pos.append(aus_pos_cand)
-                            regen_check[6] = 1
-                    if closest_lane_obj_aug.predecessors is not None and closest_lane_obj.r_neighbor_id is not None:
-                        if closest_lane_obj.r_neighbor_id in closest_lane_obj_aug.predecessors and regen_check[7] == 0:
-                            ego_aug['relation'].append('right_accelerate')
-                            aug_pos.append(aus_pos_cand)
-                            regen_check[7] = 1
-                    else:
-                        pass
-                if regen_trial > 2 * len(val_idx):
-                    regen = False
+                disp = aus_pos_cand - data['gt_hists'][0][-1,:]
+                if np.abs(np.rad2deg(np.arctan2(disp[1], disp[0])) - original_dir) < 90:
+                    closest_lane_obj_aug, _, _, _, _ = am.get_nearest_centerline(aus_pos_cand, data['city'], visualize=False)
+                    if closest_lane_obj_aug.id in seg_lists:
+                        if closest_lane_obj_aug.l_neighbor_id is not None:
+                            if closest_lane_obj_aug.l_neighbor_id == closest_lane_obj.id and regen_check[0] == 0:
+                                ego_aug['relation'].append('right')
+                                aug_pos.append(aus_pos_cand)
+                                regen_check[0] = 1
+                        if closest_lane_obj_aug.r_neighbor_id is not None:
+                            if closest_lane_obj_aug.r_neighbor_id == closest_lane_obj.id and regen_check[1] == 0:
+                                ego_aug['relation'].append('left')
+                                aug_pos.append(aus_pos_cand)
+                                regen_check[1] = 1
+                        if closest_lane_obj_aug.successors is not None:
+                            if closest_lane_obj.id in closest_lane_obj_aug.successors and regen_check[2] == 0:
+                                ego_aug['relation'].append('brake')
+                                aug_pos.append(aus_pos_cand)
+                                regen_check[2] = 1
+                        if closest_lane_obj_aug.predecessors is not None:
+                            if closest_lane_obj.id in closest_lane_obj_aug.predecessors and regen_check[3] == 0:
+                                ego_aug['relation'].append('accelerate')
+                                aug_pos.append(aus_pos_cand)
+                                regen_check[3] = 1
+                        if closest_lane_obj_aug.successors is not None and closest_lane_obj.l_neighbor_id is not None:
+                            if closest_lane_obj.l_neighbor_id in closest_lane_obj_aug.successors and regen_check[4] == 0:
+                                ego_aug['relation'].append('left_brake')
+                                aug_pos.append(aus_pos_cand)
+                                regen_check[4] = 1
+                        if closest_lane_obj_aug.predecessors is not None and closest_lane_obj.l_neighbor_id is not None:
+                            if closest_lane_obj.l_neighbor_id in closest_lane_obj_aug.predecessors and regen_check[5] == 0:
+                                ego_aug['relation'].append('left_accelerate')
+                                aug_pos.append(aus_pos_cand)
+                                regen_check[5] = 1
+                        if closest_lane_obj_aug.successors is not None and closest_lane_obj.r_neighbor_id is not None:
+                            if closest_lane_obj.r_neighbor_id in closest_lane_obj_aug.successors and regen_check[6] == 0:
+                                ego_aug['relation'].append('right_brake')
+                                aug_pos.append(aus_pos_cand)
+                                regen_check[6] = 1
+                        if closest_lane_obj_aug.predecessors is not None and closest_lane_obj.r_neighbor_id is not None:
+                            if closest_lane_obj.r_neighbor_id in closest_lane_obj_aug.predecessors and regen_check[7] == 0:
+                                ego_aug['relation'].append('right_accelerate')
+                                aug_pos.append(aus_pos_cand)
+                                regen_check[7] = 1
+                        else:
+                            pass
+                    if regen_trial > 2 * len(val_idx):
+                        regen = False
 
         vel_list_prev_x = []
         vel_list_next_x = []
@@ -424,6 +426,12 @@ class ArgoDataset(Dataset):
         end_vel_y = np.mean(vel_list_end_y)
         vel_init_x = (prev_vel_x + next_vel_x) / 2
         vel_init_y = (prev_vel_y + next_vel_y) / 2
+
+        end_direction = []
+        for i in range(len(aug_pos)):
+            dir_vec = am.get_lane_direction(aug_pos[i], data['city'], visualize=False)
+            end_direction.append(np.rad2deg(np.arctan2(dir_vec[0][1], dir_vec[0][0])))
+
         if np.sqrt(vel_init_y**2 + vel_init_x**2) < 1:
             vel_init_x = np.cos(np.deg2rad(original_dir))
             vel_init_y = np.sin(np.deg2rad(original_dir))
@@ -432,13 +440,12 @@ class ArgoDataset(Dataset):
         disp_end_aug = np.linalg.norm(aug_pos - data['gt_hists'][0][-1], axis=1)
         end_vel_aug_x = end_vel_x * disp_end_aug / disp_end
         end_vel_aug_y = end_vel_y * disp_end_aug / disp_end
+        for i in range(end_vel_aug_y.shape[0]):
+            vel_abs = np.sqrt(end_vel_aug_x[i]**2 + end_vel_aug_y[i]**2)
+            end_vel_aug_x[i] = vel_abs * np.cos(np.deg2rad(end_direction[i]))
+            end_vel_aug_y[i] = vel_abs * np.sin(np.deg2rad(end_direction[i]))
+
         traj_aug = path_gen(data['gt_hists'][0][-1], [vel_init_x, vel_init_y], aug_pos, [end_vel_aug_x, end_vel_aug_y])
-
-        plt.plot(data['gt_preds'][0][:, 0], data['gt_preds'][0][:, 1], color = 'red')
-        for i in range(traj_aug.shape[0]):
-            plt.plot(traj_aug[i, 1:, 0], traj_aug[i, 1:, 1], color = 'blue')
-        plt.show()
-
         ego_aug['traj'] = traj_aug[:, 1:, :]
         data['ego_aug'] = ego_aug
         return data
