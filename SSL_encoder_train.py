@@ -142,7 +142,7 @@ def main():
                 shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
 
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=False)
+    dataset = Dataset(config["train_split"], config, train=True)
     train_sampler = DistributedSampler(
         dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )
@@ -170,7 +170,7 @@ def main():
     )
     config["display_iters"] = len(train_loader.dataset.split)
     config["val_iters"] = len(train_loader.dataset.split) * 2
-
+    config["num_epochs"] = 1000
     hvd.broadcast_parameters(net.state_dict(), root_rank=0)
     hvd.broadcast_optimizer_state(opt.opt, root_rank=0)
 
