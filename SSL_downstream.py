@@ -195,13 +195,16 @@ def actor_gather(actors: List[Tensor]) -> Tuple[Tensor, List[Tensor]]:
 class downstream_net(nn.Module):
     def __init__(self, config, enc_net):
         super(downstream_net, self).__init__()
+        self.config = config
         self.encoder = enc_net
         self.pred_net = PredNet(config)
 
     def forward(self, data):
-        # with torch.no_grad():
-        #     actors = self.encoder(data)
-        actors = self.encoder(data)
+        if 'encoder' in self.config['freeze']:
+            with torch.no_grad():
+                actors = self.encoder(data)
+        else:
+            actors = self.encoder(data)
         if isinstance(actors[0], list):
             actors = actors[0]
         actors = actors[1]
@@ -232,20 +235,50 @@ def get_model(args):
     base_model = import_module(base_model_name+ '_backbone')
     encoder = import_module(encoder_name)
 
-    config, config_enc, Dataset, collate_fn, enc_net, _, _ = encoder.get_model(base_model_name)
+    config, config_enc, Dataset, collate_fn, enc_net, _, _ = encoder.get_model(args)
     _, _, _, _, loss, post_process, opt = base_model.get_model()
-    if False:
-        pre_trained_weight = torch.load(config_enc['pre_trained_weight'])
-        enc_net.load_state_dict(pre_trained_weight["state_dict"])
-        print('pretrained weight for encoder is loaded from "LaneGCN/pre_trained/36.0000.ckpt"')
+    if 'encoder' in args.transfer:
+        # pre_trained_weight = torch.load(config_enc['pre_trained_weight'])
+        # enc_net.load_state_dict(pre_trained_weight["state_dict"])
+        print('encoder is transferred')
+    config['freeze'] = args.freeze
 
     model = downstream_net(config, enc_net)
     model = model.cuda()
 
-    params_pred = [(name, param) for name, param in model.pred_net.named_parameters()]
-    params_pred = [p for n, p in params_pred]
+    if 'backbone' in args.freeze:
+        print('backbone is freezed')
+        if 'encoder' in args.freeze:
+            params_pred = [(name, param) for name, param in model.pred_net.named_parameters()]
+            params = [p for n, p in params_pred]
+            print('encoder is freezed')
 
-    opt = Optimizer(params_pred, config)
+        else:
+            params_pred = [(name, param) for name, param in model.pred_net.named_parameters()]
+            params_wrap = [(name, param) for name, param in model.encoder.action_emb.named_parameters()]
+            params_out = [(name, param) for name, param in model.encoder.out.named_parameters()]
+            params_aux = [(name, param) for name, param in model.encoder.auxiliary.named_parameters()]
+
+            params_wrap = [p for n, p in params_wrap]
+            params_out = [p for n, p in params_out]
+            params_aux = [p for n, p in params_aux]
+            params_pred = [p for n, p in params_pred]
+
+            params = params_wrap + params_aux + params_out + params_pred
+    else:
+        if 'encoder' in args.freeze:
+            params_pred = [(name, param) for name, param in model.pred_net.named_parameters()]
+            params_back = [(name, param) for name, param in model.encoder.base_net.named_parameters()]
+            params_back = [p for n, p in params_back]
+            params_pred = [p for n, p in params_pred]
+
+            params = params_back + params_pred
+            print('encoder is freezed')
+
+        else:
+            params = model.parameters()
+
+    opt = Optimizer(params, config)
 
     return config, config_enc, Dataset, collate_fn, model, loss, opt, post_process
 

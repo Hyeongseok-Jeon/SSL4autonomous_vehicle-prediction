@@ -175,8 +175,12 @@ def worker_init_fn(pid):
 
 def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=None):
     train_loader.sampler.set_epoch(int(epoch))
-    net.train()
-
+    if 'backbone' in args.freeze:
+        net.encoder.base_net.eval()
+    if 'encoder' in args.freeze:
+        net.encoder.action_emb.eval()
+        net.encoder.out.eval()
+        net.encoder.auxiliary.eval()
     num_batches = len(train_loader)
     epoch_per_batch = 1.0 / num_batches
     save_iters = int(np.ceil(config["save_freq"] * num_batches))

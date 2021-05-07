@@ -224,19 +224,18 @@ def get_model(args):
     encoder = SSL_encoder(config, base_model)
     if 'backbone' in args.transfer:
         pre_trained_weight = torch.load("LaneGCN/pre_trained" + '/36.000.ckpt')
-        print('pretrained weight for backbone is loaded from "LaneGCN/pre_trained/36.0000.ckpt"')
+        print('backbone is transferred')
         pretrained_dict = pre_trained_weight['state_dict']
         new_model_dict = encoder.base_net.state_dict()
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in new_model_dict}
         new_model_dict.update(pretrained_dict)
         encoder.base_net.load_state_dict(new_model_dict)
-    else:
-        print('pretrained weight for backbone is initialized with random weights')
+
     encoder = encoder.cuda()
     loss = Loss(config).cuda()
 
     if 'backbone' in args.freeze:
-        print('lanegcn backbone is excluded from optimizing parameters')
+        print('backbone is freezed')
         params_wrap = [(name, param) for name, param in encoder.action_emb.named_parameters()]
         params_out = [(name, param) for name, param in encoder.out.named_parameters()]
         params_aux = [(name, param) for name, param in encoder.auxiliary.named_parameters()]
@@ -248,7 +247,6 @@ def get_model(args):
         params = params_wrap + params_aux + params_out
         opt = Optimizer(params, config)
     else:
-        print('lanegcn backbone is included to optimizing parameters')
         params = encoder.parameters()
         opt = Optimizer(params, config)
 
