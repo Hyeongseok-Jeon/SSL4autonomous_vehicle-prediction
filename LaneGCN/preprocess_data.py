@@ -46,8 +46,8 @@ def main():
     config, *_ = model.get_model()
 
     config["preprocess"] = False  # we use raw data to generate preprocess data
-    config["val_workers"] = 4
-    config["workers"] = 4
+    config["val_workers"] = 32
+    config["workers"] = 32
     config['cross_dist'] = 6
     config['cross_angle'] = 0.5 * np.pi
 
