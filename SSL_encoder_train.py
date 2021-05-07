@@ -40,6 +40,12 @@ parser.add_argument(
     "-m", "--model", default="SSL_encoder", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument(
+    "--freeze", default=["backbone"], type=list
+)
+parser.add_argument(
+    "--transfer", default=["backbone"], type=list
+)
+parser.add_argument(
     "--base_model", default="LaneGCN.lanegcn", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument(
@@ -55,6 +61,7 @@ parser.add_argument(
 
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
+args = parser.parse_args()
 
 '''
 data_prev = torch.load('error_data_prev.pk', map_location = torch.device('cuda'))
@@ -72,9 +79,8 @@ def main():
     random.seed(seed)
 
     # Import all settings for experiment.
-    args = parser.parse_args()
     model = import_module(args.model)
-    config, config_enc, Dataset, collate_fn, net, loss, opt = model.get_model(args.base_model)
+    config, config_enc, Dataset, collate_fn, net, loss, opt = model.get_model(args)
 
     if config["horovod"]:
         opt.opt = hvd.DistributedOptimizer(
@@ -173,9 +179,8 @@ def main():
     if hvd.rank() == 0:
         print('logging directory :  ' + save_dir)
     for i in range(remaining_epochs):
-        check = train(epoch + i, config, save_dir, config_enc, train_loader, net, loss, opt, val_loader)
-        if check == 0:
-            break
+        train(epoch + i, config, save_dir, config_enc, train_loader, net, loss, opt, val_loader)
+
 
 
 def worker_init_fn(pid):
@@ -187,8 +192,8 @@ def worker_init_fn(pid):
 
 def train(epoch, config, save_dir, config_enc, train_loader, net, loss, opt, val_loader=None):
     train_loader.sampler.set_epoch(int(epoch))
-    net.train()
-    net.base_net.eval()
+    if 'backbone' in args.freeze:
+        net.base_net.eval()
     num_batches = len(train_loader)
     epoch_per_batch = 1.0 / num_batches
     save_iters = int(np.ceil(config["save_freq"] * num_batches))
@@ -222,29 +227,18 @@ def train(epoch, config, save_dir, config_enc, train_loader, net, loss, opt, val
         loss_out.backward()
         loss_tot = loss_tot + loss_out.item()
         loss_calc = loss_calc + 1
-        if torch.isnan(loss_out):
-            hid = output
-            hid = hid[1]
-
-            batch_num = hid[0].shape[0]
-            hid_positive = hid[0]
-            hid_anchor = hid[1]
-            samples = torch.zeros_like(torch.cat([hid_anchor, hid_positive]))
-            anc_idx = torch.arange(batch_num) * 2
-            pos_idx = torch.arange(batch_num) * 2 + 1
-            samples[anc_idx] = hid_anchor
-            samples[pos_idx] = hid_positive
-            labels = torch.arange(2 * batch_num)
-            labels[anc_idx] = labels[pos_idx]
-
-            infoNCE_loss = infoNCELoss(samples, labels)
-            torch.save(data, 'error_data.pk')
-            save_ckpt(net, opt, root_path, epoch)
-            print('nan loss')
-
-        lr = opt.step(epoch)
+        opt.step(epoch)
 
         num_iters = int(np.round(epoch * num_batches))
+
+        if num_iters % display_iters == 0:
+            dt = time.time() - start_time
+            print(
+                "epoch = %2.4f,  infoNCE loss  = %2.4f, time = %2.4f"
+                % (epoch, loss_tot / loss_calc, dt)
+            )
+            start_time = time.time()
+
         if hvd.rank() == 0 and (
                 num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
@@ -255,13 +249,7 @@ def train(epoch, config, save_dir, config_enc, train_loader, net, loss, opt, val
 
         if epoch >= config["num_epochs"]:
             val(config, config_enc, val_loader, net, loss, epoch)
-    dt = time.time() - start_time
-    if hvd.rank() == 0:
-        print(
-            "epoch = %2.4f,  infoNCE loss  = %2.4f, time = %2.4f"
-            % (epoch, loss_tot / loss_calc, dt)
-        )
-    return 1
+
 
 def val(config, config_enc, data_loader, net, loss, epoch):
     net.eval()

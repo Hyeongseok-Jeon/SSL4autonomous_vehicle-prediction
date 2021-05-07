@@ -111,6 +111,7 @@ class TCN(nn.Module):
 class SSL_encoder(nn.Module):
     def __init__(self, config, base_model):
         super(SSL_encoder, self).__init__()
+        self.config = config
         self.relu6 = nn.ReLU6()
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
@@ -124,7 +125,11 @@ class SSL_encoder(nn.Module):
         self.auxiliary = nn.Linear(config_action_emb["n_hid"], config_action_emb["n_hid"])
 
     def forward(self, data):
-        actors, veh_in_batch = self.base_net(data)
+        if 'backbone' in self.config['freeze']:
+            with torch.no_grad():
+                actors, veh_in_batch = self.base_net(data)
+        else:
+            actors, veh_in_batch = self.base_net(data)
         batch_num = len(veh_in_batch)
         veh_num_in_batch = sum(veh_in_batch)
         ego_idx = [0] + [sum(veh_in_batch[:i + 1]) for i in range(batch_num - 1)]
@@ -208,14 +213,16 @@ class Loss(nn.Module):
 
 
 
-def get_model(base_model_name):
+def get_model(args):
+    base_model_name = args.base_model
     base_model = import_module(base_model_name + '_backbone')
     config = base_model.config
     Dataset = base_model.ArgoDataset
     collate_fn = base_model.collate_fn
 
+    config['freeze'] = args.freeze
     encoder = SSL_encoder(config, base_model)
-    if config_enc['pre_trained'] == True:
+    if 'backbone' in args.transfer:
         pre_trained_weight = torch.load("LaneGCN/pre_trained" + '/36.000.ckpt')
         print('pretrained weight for backbone is loaded from "LaneGCN/pre_trained/36.0000.ckpt"')
         pretrained_dict = pre_trained_weight['state_dict']
@@ -223,18 +230,26 @@ def get_model(base_model_name):
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in new_model_dict}
         new_model_dict.update(pretrained_dict)
         encoder.base_net.load_state_dict(new_model_dict)
+    else:
+        print('pretrained weight for backbone is initialized with random weights')
     encoder = encoder.cuda()
     loss = Loss(config).cuda()
 
-    params_wrap = [(name, param) for name, param in encoder.action_emb.named_parameters()]
-    params_out = [(name, param) for name, param in encoder.out.named_parameters()]
-    params_aux = [(name, param) for name, param in encoder.auxiliary.named_parameters()]
+    if 'backbone' in args.freeze:
+        print('lanegcn backbone is excluded from optimizing parameters')
+        params_wrap = [(name, param) for name, param in encoder.action_emb.named_parameters()]
+        params_out = [(name, param) for name, param in encoder.out.named_parameters()]
+        params_aux = [(name, param) for name, param in encoder.auxiliary.named_parameters()]
 
-    params_wrap = [p for n, p in params_wrap]
-    params_out = [p for n, p in params_out]
-    params_aux = [p for n, p in params_aux]
+        params_wrap = [p for n, p in params_wrap]
+        params_out = [p for n, p in params_out]
+        params_aux = [p for n, p in params_aux]
 
-    params = params_wrap + params_aux + params_out
-    opt = Optimizer(params, config)
+        params = params_wrap + params_aux + params_out
+        opt = Optimizer(params, config)
+    else:
+        print('lanegcn backbone is included to optimizing parameters')
+        params = encoder.parameters()
+        opt = Optimizer(params, config)
 
     return config, config_enc, Dataset, collate_fn, encoder, loss, opt

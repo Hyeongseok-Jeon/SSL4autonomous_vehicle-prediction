@@ -40,6 +40,12 @@ parser.add_argument(
     "-m", "--model", default="SSL_downstream", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument(
+    "--freeze", default=["backbone", "encoder"], type=list
+)
+parser.add_argument(
+    "--transfer", default=["backbone", "encoder"], type=list
+)
+parser.add_argument(
     "--encoder", default="SSL_encoder", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument(
@@ -58,6 +64,8 @@ parser.add_argument(
 
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
+args = parser.parse_args()
+
 
 def main():
     seed = hvd.rank()
@@ -67,7 +75,6 @@ def main():
     random.seed(seed)
 
     # Import all settings for experiment.
-    args = parser.parse_args()
     model = import_module(args.model)
     config, config_enc, Dataset, collate_fn, net, loss, opt, post_process = model.get_model(args)
 
