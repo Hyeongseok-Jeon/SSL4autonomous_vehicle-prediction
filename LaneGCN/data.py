@@ -97,11 +97,11 @@ class ArgoDataset(Dataset):
                 data['raster'] = raster
             return data
 
-        data = self.read_argo_data(idx)
-        data = self.get_obj_feats(data)
+        data = read_argo_data(idx)
+        data = get_obj_feats(data)
         data['idx'] = idx
         try:
-            data = self.get_ref_path_agent(data)
+            data = get_ref_path_agent(data)
             data = self.get_ego_augmentation(data)
             data = self.get_action_representation(data)
             data = self.get_reaction_maneuver_class(data)
@@ -131,11 +131,11 @@ class ArgoDataset(Dataset):
         else:
             return len(self.avl)
 
-    def read_argo_data(self, idx):
-        city = copy.deepcopy(self.avl[idx].city)
+    def read_argo_data( idx):
+        city = copy.deepcopy(avl[idx].city)
 
         """TIMESTAMP,TRACK_ID,OBJECT_TYPE,X,Y,CITY_NAME"""
-        df = copy.deepcopy(self.avl[idx].seq_df)
+        df = copy.deepcopy(avl[idx].seq_df)
 
         agt_ts = np.sort(np.unique(df['TIMESTAMP'].values))
         mapping = dict()
@@ -163,7 +163,7 @@ class ArgoDataset(Dataset):
         agt_step = steps[idcs]
         av_traj = trajs[av_idcs]
         av_step = steps[av_idcs]
-        file_name = self.avl[idx].current_seq
+        file_name = avl[idx].current_seq
         file_name = os.path.basename(file_name).split('/')[0]
         del keys[agt_idx]
         del keys[av_idx]
@@ -180,10 +180,10 @@ class ArgoDataset(Dataset):
         data['file_name'] = file_name
         return data
 
-    def get_obj_feats(self, data):
+    def get_obj_feats( data):
         orig = data['trajs'][0][19].copy().astype(np.float32)
-
-        if self.train and self.config['rot_aug']:
+        train = False
+        if train and config['rot_aug']:
             theta = np.random.rand() * np.pi * 2.0
         else:
             pre = data['trajs'][0][18] - orig
@@ -223,7 +223,7 @@ class ArgoDataset(Dataset):
             feat[step, :2] = np.matmul(rot, (traj - orig.reshape(-1, 2)).T).T
             feat[step, 2] = 1.0
 
-            x_min, x_max, y_min, y_max = self.config['pred_range']
+            x_min, x_max, y_min, y_max = config['pred_range']
             if feat[-1, 0] < x_min or feat[-1, 0] > x_max or feat[-1, 1] < y_min or feat[-1, 1] > y_max:
                 continue
             traj_save = np.zeros(shape=(20, 2))
@@ -252,7 +252,7 @@ class ArgoDataset(Dataset):
         data['has_preds'] = has_preds
         return data
 
-    def get_ref_path_agent(self, data):
+    def get_ref_path_agent( data):
         # data = read_argo_data(12345)
         # data = get_obj_feats(data)
         # target_traj_agent = np.concatenate([data['gt_hists'][1], data['gt_preds'][1]], axis=0)
@@ -264,7 +264,7 @@ class ArgoDataset(Dataset):
             hist_traj = data['gt_hists'][k][np.nonzero(data['gt_hists'][k][:, 0]), :][0]
             if hist_traj.shape[0] == 1:
                 hist_traj = np.concatenate([hist_traj, hist_traj], axis=0)
-            cl_list = self.am.get_candidate_centerlines_for_traj(hist_traj, data['city'], viz=False)
+            cl_list = am.get_candidate_centerlines_for_traj(hist_traj, data['city'], viz=False)
             cl_dense_list = []
             dist_to_ref = []
             for i in range(len(cl_list[0])):
@@ -288,24 +288,24 @@ class ArgoDataset(Dataset):
 
     def get_ego_augmentation(self, data):
         ego_end_point_original = data['gt_preds'][0][-1]
-        path_cands = self.am.get_candidate_centerlines_for_traj(data['gt_hists'][0], data['city'], viz=False)
+        path_cands = am.get_candidate_centerlines_for_traj(data['gt_hists'][0], data['city'], viz=True)
 
         seg_lists = []
         for i in range(len(path_cands[1])):
             seg_lists = seg_lists + path_cands[1][i]
         seg_lists = list(dict.fromkeys(seg_lists))
 
-        closest_lane_obj, conf, dense_centerline, nearby_lane_ids, per_lane_dists = self.am.get_nearest_centerline(ego_end_point_original, data['city'], visualize=False)
-        original_dir = self.am.get_lane_direction(data['gt_hists'][0][-1], data['city'])
+        closest_lane_obj, conf, dense_centerline, nearby_lane_ids, per_lane_dists = am.get_nearest_centerline(ego_end_point_original, data['city'], visualize=True)
+        original_dir = am.get_lane_direction(data['gt_hists'][0][-1], data['city'])
         original_dir = np.rad2deg(np.arctan2(original_dir[0][1], original_dir[0][0]))
         final_pos_cands = []
         final_pos_segments = []
         for i in range(len(nearby_lane_ids)):
             if nearby_lane_ids[i] in seg_lists:
-                final_pos_cands.append(self.am.get_cl_from_lane_seq([[nearby_lane_ids[i]]], data['city'])[0])
+                final_pos_cands.append(am.get_cl_from_lane_seq([[nearby_lane_ids[i]]], data['city'])[0])
                 final_pos_segments.append(nearby_lane_ids[i])
         if len(final_pos_cands) == 0:
-            final_pos_cands.append(self.am.get_cl_from_lane_seq([[closest_lane_obj.id]], data['city'])[0])
+            final_pos_cands.append(am.get_cl_from_lane_seq([[closest_lane_obj.id]], data['city'])[0])
             final_pos_segments.append(closest_lane_obj.id)
         final_pos_cands = np.concatenate(final_pos_cands)
 
@@ -345,7 +345,7 @@ class ArgoDataset(Dataset):
                 regen_trial = regen_trial + 1
                 idx_cand = np.random.randint(len(val_idx))
                 aus_pos_cand = final_pos_cands[val_idx[idx_cand]]
-                closest_lane_obj_aug, _, _, _, _ = self.am.get_nearest_centerline(aus_pos_cand, data['city'], visualize=False)
+                closest_lane_obj_aug, _, _, _, _ = am.get_nearest_centerline(aus_pos_cand, data['city'], visualize=False)
                 if closest_lane_obj_aug.id in seg_lists:
                     if closest_lane_obj_aug.l_neighbor_id is not None:
                         if closest_lane_obj_aug.l_neighbor_id == closest_lane_obj.id and regen_check[0] == 0:
@@ -399,14 +399,14 @@ class ArgoDataset(Dataset):
         vel_list_next_y = []
         vel_list_end_y = []
         for i in range(5):
-            vel_list_prev_x.append(np.abs(data['gt_hists'][0][-i - 1, 0] - data['gt_hists'][0][-i - 2, 0]) / 0.1)
-            vel_list_prev_y.append(np.abs(data['gt_hists'][0][-i - 1, 1] - data['gt_hists'][0][-i - 2, 1]) / 0.1)
+            vel_list_prev_x.append((data['gt_hists'][0][-i - 1, 0] - data['gt_hists'][0][-i - 2, 0]) / 0.1)
+            vel_list_prev_y.append((data['gt_hists'][0][-i - 1, 1] - data['gt_hists'][0][-i - 2, 1]) / 0.1)
 
-            vel_list_next_x.append(np.abs(data['gt_preds'][0][i, 0] - data['gt_preds'][0][i + 1, 0]) / 0.1)
-            vel_list_next_y.append(np.abs(data['gt_preds'][0][i, 1] - data['gt_preds'][0][i + 1, 1]) / 0.1)
+            vel_list_next_x.append((data['gt_preds'][0][i + 1, 0] - data['gt_preds'][0][i, 0]) / 0.1)
+            vel_list_next_y.append((data['gt_preds'][0][i + 1, 1] - data['gt_preds'][0][i, 1]) / 0.1)
 
-            vel_list_end_x.append(np.abs(data['gt_preds'][0][-i - 1, 0] - data['gt_preds'][0][-i - 2, 0]) / 0.1)
-            vel_list_end_y.append(np.abs(data['gt_preds'][0][-i - 1, 1] - data['gt_preds'][0][-i - 2, 1]) / 0.1)
+            vel_list_end_x.append((data['gt_preds'][0][-i - 1, 0] - data['gt_preds'][0][-i - 2, 0]) / 0.1)
+            vel_list_end_y.append((data['gt_preds'][0][-i - 1, 1] - data['gt_preds'][0][-i - 2, 1]) / 0.1)
 
         prev_vel_x = np.mean(vel_list_prev_x)
         next_vel_x = np.mean(vel_list_next_x)

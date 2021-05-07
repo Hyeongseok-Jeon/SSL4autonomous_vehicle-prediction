@@ -180,6 +180,9 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
 
     start_time = time.time()
     metrics = dict()
+    save_dir = os.path.join(os.path.dirname(config_enc["save_dir"]), args.model) + args.memo
+
+
     for i, data in tqdm(enumerate(train_loader),disable=hvd.rank()):
         epoch += epoch_per_batch
         data = dict(data)
