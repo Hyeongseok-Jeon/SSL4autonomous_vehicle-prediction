@@ -231,7 +231,7 @@ def train(epoch, config, save_dir, config_enc, train_loader, net, loss, opt, val
 
         num_iters = int(np.round(epoch * num_batches))
 
-        if num_iters % display_iters == 0:
+        if hvd.rank() == 0 and num_iters % display_iters == 0:
             dt = time.time() - start_time
             print(
                 "epoch = %2.4f,  infoNCE loss  = %2.4f, time = %2.4f"
