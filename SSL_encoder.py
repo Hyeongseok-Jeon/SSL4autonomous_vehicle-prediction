@@ -25,7 +25,7 @@ config_action_emb["dropout"] = 0.2
 config_action_emb["n_hid"] = 128
 config_enc['action_emb'] = config_action_emb
 config_enc['auxiliary'] = True
-config_enc['pre_trained'] = True
+config_enc['pre_trained'] = False
 config_enc['pre_trained_weight'] = os.path.join(root_path, 'results', 'SSL_encoder_initialize_with_pretrained_lanegcn_and_freeze', '18.000.ckpt')
 
 if "save_dir" not in config_enc:
@@ -217,7 +217,7 @@ def get_model(base_model_name):
     encoder = SSL_encoder(config, base_model)
     if config_enc['pre_trained'] == True:
         pre_trained_weight = torch.load("LaneGCN/pre_trained" + '/36.000.ckpt')
-        print('pretrained weight is loaded from "LaneGCN/pre_trained/36.0000.ckpt"')
+        print('pretrained weight for backbone is loaded from "LaneGCN/pre_trained/36.0000.ckpt"')
         pretrained_dict = pre_trained_weight['state_dict']
         new_model_dict = encoder.base_net.state_dict()
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in new_model_dict}
