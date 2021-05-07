@@ -106,7 +106,7 @@ def main():
         return
 
     # Create log and copy all code
-    save_dir = config_enc["save_dir"] + args.memo
+    save_dir = os.path.join(os.path.dirname(config_enc["save_dir"]), args.model) + args.memo
     log = os.path.join(save_dir, "log")
     if hvd.rank() == 0:
         if not os.path.exists(save_dir):
