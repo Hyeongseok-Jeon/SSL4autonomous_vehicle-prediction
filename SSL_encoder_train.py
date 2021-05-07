@@ -171,6 +171,7 @@ def main():
     config["display_iters"] = len(train_loader.dataset.split)
     config["val_iters"] = len(train_loader.dataset.split) * 2
     config["num_epochs"] = 1000
+    config["save_freq"] = 25
     hvd.broadcast_parameters(net.state_dict(), root_rank=0)
     hvd.broadcast_optimizer_state(opt.opt, root_rank=0)
 
