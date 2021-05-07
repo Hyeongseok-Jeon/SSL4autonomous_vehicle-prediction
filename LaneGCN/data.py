@@ -287,6 +287,14 @@ class ArgoDataset(Dataset):
         return data
 
     def get_ego_augmentation(self, data):
+        data = read_argo_data(idx)
+        data = get_obj_feats(data)
+        data['idx'] = idx
+        data = get_ref_path_agent(data)
+
+
+
+
         ego_end_point_original = data['gt_preds'][0][-1]
         path_cands = am.get_candidate_centerlines_for_traj(data['gt_hists'][0], data['city'], viz=True)
 
@@ -416,12 +424,20 @@ class ArgoDataset(Dataset):
         end_vel_y = np.mean(vel_list_end_y)
         vel_init_x = (prev_vel_x + next_vel_x) / 2
         vel_init_y = (prev_vel_y + next_vel_y) / 2
+        if np.sqrt(vel_init_y**2 + vel_init_x**2) < 1:
+            vel_init_x = np.cos(np.deg2rad(original_dir))
+            vel_init_y = np.sin(np.deg2rad(original_dir))
 
         disp_end = np.linalg.norm(data['gt_preds'][0][-1] - data['gt_hists'][0][-1])
         disp_end_aug = np.linalg.norm(aug_pos - data['gt_hists'][0][-1], axis=1)
         end_vel_aug_x = end_vel_x * disp_end_aug / disp_end
         end_vel_aug_y = end_vel_y * disp_end_aug / disp_end
         traj_aug = path_gen(data['gt_hists'][0][-1], [vel_init_x, vel_init_y], aug_pos, [end_vel_aug_x, end_vel_aug_y])
+
+        plt.plot(data['gt_preds'][0][:, 0], data['gt_preds'][0][:, 1], color = 'red')
+        for i in range(traj_aug.shape[0]):
+            plt.plot(traj_aug[i, 1:, 0], traj_aug[i, 1:, 1], color = 'blue')
+        plt.show()
 
         ego_aug['traj'] = traj_aug[:, 1:, :]
         data['ego_aug'] = ego_aug

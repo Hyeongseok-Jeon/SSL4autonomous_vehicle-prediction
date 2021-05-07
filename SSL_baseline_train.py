@@ -58,6 +58,8 @@ parser.add_argument(
 
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
+args = parser.parse_args()
+
 
 def main():
     seed = hvd.rank()
@@ -67,7 +69,6 @@ def main():
     random.seed(seed)
 
     # Import all settings for experiment.
-    args = parser.parse_args()
     model = import_module(args.model)
     config, config_enc, Dataset, collate_fn, net, loss, opt, post_process = model.get_model(args)
 
