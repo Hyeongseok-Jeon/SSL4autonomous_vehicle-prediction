@@ -136,7 +136,7 @@ def main():
                 shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
 
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=True)
+    dataset = Dataset(config["train_split"], config, train=False)
     train_sampler = DistributedSampler(
         dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )
@@ -173,7 +173,7 @@ def main():
     if hvd.rank() == 0:
         print('logging directory :  ' + save_dir)
     for i in range(remaining_epochs):
-        check = train(epoch + i, config, config_enc, train_loader, net, loss, opt, val_loader)
+        check = train(epoch + i, config, save_dir, config_enc, train_loader, net, loss, opt, val_loader)
         if check == 0:
             break
 
@@ -185,7 +185,7 @@ def worker_init_fn(pid):
     random.seed(random_seed)
 
 
-def train(epoch, config, config_enc, train_loader, net, loss, opt, val_loader=None):
+def train(epoch, config, save_dir, config_enc, train_loader, net, loss, opt, val_loader=None):
     train_loader.sampler.set_epoch(int(epoch))
     net.train()
     net.base_net.eval()

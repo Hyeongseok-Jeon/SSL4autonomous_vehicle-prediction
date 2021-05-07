@@ -390,8 +390,8 @@ class ArgoDataset(Dataset):
                                 regen_check[7] = 1
                         else:
                             pass
-                    if regen_trial > 2 * len(val_idx):
-                        regen = False
+                if regen_trial > 2 * len(val_idx):
+                    regen = False
 
         vel_list_prev_x = []
         vel_list_next_x = []
