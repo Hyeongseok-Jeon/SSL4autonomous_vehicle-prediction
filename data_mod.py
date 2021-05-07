@@ -57,7 +57,7 @@ def main():
 
     # Import all settings for experiment.
     args = parser.parse_args()
-    model = import_module(args.model)
+    model = import_module(args.base_model)
     config, config_enc, Dataset, collate_fn, net, loss, opt = model.get_model(args.base_model)
 
     # Data loader for training
