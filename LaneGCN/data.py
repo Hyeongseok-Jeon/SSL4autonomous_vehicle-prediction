@@ -287,14 +287,14 @@ class ArgoDataset(Dataset):
 
     def get_ego_augmentation(self, data):
         ego_end_point_original = data['gt_preds'][0][-1]
-        path_cands = self.am.get_candidate_centerlines_for_traj(data['gt_hists'][0], data['city'], viz=True)
+        path_cands = self.am.get_candidate_centerlines_for_traj(data['gt_hists'][0], data['city'], viz=False)
 
         seg_lists = []
         for i in range(len(path_cands[1])):
             seg_lists = seg_lists + path_cands[1][i]
         seg_lists = list(dict.fromkeys(seg_lists))
 
-        closest_lane_obj, conf, dense_centerline, nearby_lane_ids, per_lane_dists = self.am.get_nearest_centerline(ego_end_point_original, data['city'], visualize=True)
+        closest_lane_obj, conf, dense_centerline, nearby_lane_ids, per_lane_dists = self.am.get_nearest_centerline(ego_end_point_original, data['city'], visualize=False)
         original_dir = self.am.get_lane_direction(data['gt_hists'][0][-1], data['city'])
         original_dir = np.rad2deg(np.arctan2(original_dir[0][1], original_dir[0][0]))
         final_pos_cands = []
