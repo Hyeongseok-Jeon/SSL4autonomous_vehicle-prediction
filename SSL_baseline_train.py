@@ -129,7 +129,7 @@ def main():
     )
     train_loader = DataLoader(
         dataset,
-        batch_size=8,
+        batch_size=config["batch_size"],
         num_workers=config["workers"],
         sampler=train_sampler,
         collate_fn=collate_fn,
