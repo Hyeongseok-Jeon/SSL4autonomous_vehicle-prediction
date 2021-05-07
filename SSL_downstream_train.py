@@ -52,7 +52,7 @@ parser.add_argument(
     "--base_model", default="LaneGCN.lanegcn", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument(
-    "--memo", default="_initialize_with_pretrained_lanegcn_and_freeze"
+    "--memo", default="_NA"
 )
 parser.add_argument("--eval", action="store_true")
 parser.add_argument(
@@ -113,7 +113,7 @@ def main():
         return
 
     # Create log and copy all code
-    save_dir = config["save_dir"]
+    save_dir = os.path.dirname(config_enc["save_dir"]) + '/SSL_downstream' + args.memo
     log = os.path.join(save_dir, "log")
     if hvd.rank() == 0:
         if not os.path.exists(save_dir):
@@ -130,7 +130,7 @@ def main():
                 shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
 
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=True)
+    dataset = Dataset(config["train_split"], config, train=False)
     train_sampler = DistributedSampler(
         dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )
@@ -156,14 +156,15 @@ def main():
         collate_fn=collate_fn,
         pin_memory=True,
     )
-
+    config["display_iters"] = len(train_loader.dataset.split)
+    config["val_iters"] = len(train_loader.dataset.split) * 2
     hvd.broadcast_parameters(net.state_dict(), root_rank=0)
     hvd.broadcast_optimizer_state(opt.opt, root_rank=0)
 
     epoch = config["epoch"]
     remaining_epochs = int(np.ceil(config["num_epochs"] - epoch))
     for i in range(remaining_epochs):
-        train(epoch + i, config, train_loader, net, loss, post_process, opt, val_loader)
+        train(epoch + i, config, save_dir, train_loader, net, loss, post_process, opt, val_loader)
 
 
 def worker_init_fn(pid):
@@ -173,7 +174,7 @@ def worker_init_fn(pid):
     random.seed(random_seed)
 
 
-def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=None):
+def train(epoch, config, save_dir, train_loader, net, loss, post_process, opt, val_loader=None):
     train_loader.sampler.set_epoch(int(epoch))
     if 'backbone' in args.freeze:
         net.encoder.base_net.eval()
@@ -208,7 +209,7 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
         if hvd.rank() == 0 and (
                 num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
-            save_ckpt(net, opt, config["save_dir"], epoch)
+            save_ckpt(net, opt, save_dir, epoch)
 
         if num_iters % display_iters == 0:
             dt = time.time() - start_time
