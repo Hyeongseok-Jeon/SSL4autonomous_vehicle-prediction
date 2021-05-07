@@ -59,18 +59,19 @@ parser.add_argument(
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
 
+seed = hvd.rank()
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+np.random.seed(seed)
+random.seed(seed)
+
+# Import all settings for experiment.
+args = parser.parse_args()
+model = import_module(args.model)
+config, config_enc, Dataset, collate_fn, net, loss, opt, post_process = model.get_model(args)
+
+
 def main():
-    seed = hvd.rank()
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-
-    # Import all settings for experiment.
-    args = parser.parse_args()
-    model = import_module(args.model)
-    config, config_enc, Dataset, collate_fn, net, loss, opt, post_process = model.get_model(args)
-
     if config["horovod"]:
         opt.opt = hvd.DistributedOptimizer(
             opt.opt, named_parameters=net.named_parameters()

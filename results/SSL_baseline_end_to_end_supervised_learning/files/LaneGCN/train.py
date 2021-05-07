@@ -3,6 +3,7 @@
 # limitations under the License.
 
 import os
+
 os.umask(0)
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -21,32 +22,25 @@ import torch
 from torch.utils.data import Sampler, DataLoader
 import horovod.torch as hvd
 
+
 from torch.utils.data.distributed import DistributedSampler
 
-from LaneGCN.utils import Logger, load_pretrain
+from utils import Logger, load_pretrain
 
 from mpi4py import MPI
+
 
 comm = MPI.COMM_WORLD
 hvd.init()
 torch.cuda.set_device(hvd.local_rank())
 
-# root_path = os.path.dirname(os.path.abspath(__file__))
-root_path = os.getcwd()
+root_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, root_path)
+
 
 parser = argparse.ArgumentParser(description="Fuse Detection in Pytorch")
 parser.add_argument(
-    "-m", "--model", default="SSL_downstream", type=str, metavar="MODEL", help="model name"
-)
-parser.add_argument(
-    "--encoder", default="SSL_encoder", type=str, metavar="MODEL", help="model name"
-)
-parser.add_argument(
-    "--base_model", default="LaneGCN.lanegcn", type=str, metavar="MODEL", help="model name"
-)
-parser.add_argument(
-    "--memo", default="_initialize_with_pretrained_lanegcn_and_freeze"
+    "-m", "--model", default="lanegcn", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument("--eval", action="store_true")
 parser.add_argument(
@@ -56,8 +50,6 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
 )
 
-parser.add_argument("--mode", default='client')
-parser.add_argument("--port", default=52162)
 
 def main():
     seed = hvd.rank()
@@ -69,7 +61,7 @@ def main():
     # Import all settings for experiment.
     args = parser.parse_args()
     model = import_module(args.model)
-    config, config_enc, Dataset, collate_fn, net, loss, opt, post_process = model.get_model(args)
+    config, Dataset, collate_fn, net, loss, post_process, opt = model.get_model()
 
     if config["horovod"]:
         opt.opt = hvd.DistributedOptimizer(
@@ -195,7 +187,7 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
 
         num_iters = int(np.round(epoch * num_batches))
         if hvd.rank() == 0 and (
-                num_iters % save_iters == 0 or epoch >= config["num_epochs"]
+            num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
             save_ckpt(net, opt, config["save_dir"], epoch)
 
@@ -265,6 +257,3 @@ def sync(data):
 
 if __name__ == "__main__":
     main()
-
-# TODO: make downstream be linear
-# TODO: make sure the save dir and code architecture for visualization

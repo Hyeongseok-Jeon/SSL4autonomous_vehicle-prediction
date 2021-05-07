@@ -81,7 +81,7 @@ class ArgoDataset(Dataset):
                 data = new_data
             else:
                 new_data = dict()
-                for key in ['city', 'orig', 'gt_preds', 'has_preds', 'theta', 'rot', 'feats', 'ctrs', 'graph', 'gt_hists', 'file_name', 'ref_path', 'ego_aug', 'action','ego_maneuver', 'idx']:
+                for key in ['city', 'orig', 'gt_preds', 'has_preds', 'theta', 'rot', 'feats', 'ctrs', 'graph', 'gt_hists', 'file_name', 'ref_path', 'ego_aug', 'action','ego_maneuver','idx']:
                     if key in data:
                         new_data[key] = ref_copy(data[key])
                 data = new_data
