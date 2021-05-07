@@ -57,9 +57,10 @@ def main():
 
     # Import all settings for experiment.
     args = parser.parse_args()
-    model = import_module(args.model)
-    config, config_enc, Dataset, collate_fn, net, loss, opt = model.get_model(args)
-
+    model = import_module(args.base_model)
+    Dataset = model.ArgoDataset
+    config = model.config
+    collate_fn = model.collate_fn
     # Data loader for training
     dataset = Dataset(config["train_split"], config, train=True)
     train_sampler = DistributedSampler(
