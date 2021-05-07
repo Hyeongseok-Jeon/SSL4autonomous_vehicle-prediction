@@ -234,7 +234,7 @@ def get_model(args):
 
     config, config_enc, Dataset, collate_fn, enc_net, _, _ = encoder.get_model(base_model_name)
     _, _, _, _, loss, post_process, opt = base_model.get_model()
-    if False:
+    if True:
         pre_trained_weight = torch.load(config_enc['pre_trained_weight'])
         enc_net.load_state_dict(pre_trained_weight["state_dict"])
         print('pretrained weight for encoder is loaded from "LaneGCN/pre_trained/36.0000.ckpt"')
