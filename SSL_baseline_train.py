@@ -156,7 +156,7 @@ def main():
     epoch = config["epoch"]
     remaining_epochs = int(np.ceil(config["num_epochs"] - epoch))
     for i in range(remaining_epochs):
-        train(epoch + i, config, train_loader, net, loss, post_process, opt, val_loader)
+        train(epoch + i, config, config_enc, train_loader, net, loss, post_process, opt, val_loader)
 
 
 def worker_init_fn(pid):
@@ -166,7 +166,7 @@ def worker_init_fn(pid):
     random.seed(random_seed)
 
 
-def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=None):
+def train(epoch, config, config_enc, train_loader, net, loss, post_process, opt, val_loader=None):
     train_loader.sampler.set_epoch(int(epoch))
     net.train()
 
