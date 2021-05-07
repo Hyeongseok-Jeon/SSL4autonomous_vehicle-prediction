@@ -197,7 +197,7 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
         if hvd.rank() == 0 and (
                 num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
-            save_ckpt(net, opt, config["save_dir"], epoch)
+            save_ckpt(net, opt, save_dir, epoch)
 
         if num_iters % display_iters == 0:
             dt = time.time() - start_time
