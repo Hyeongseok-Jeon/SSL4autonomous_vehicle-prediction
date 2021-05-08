@@ -380,3 +380,90 @@ epoch = 253.0000,  infoNCE loss  = 0.0255, time = 263.2773
 epoch = 253.6364, validation infoNCE loss  = 0.0268, time = 48.0183
 epoch = 254.0000,  infoNCE loss  = 0.0255, time = 310.8995
 epoch = 255.0000,  infoNCE loss  = 0.0256, time = 262.7143
+epoch = 255.6818, validation infoNCE loss  = 0.0265, time = 45.8575
+epoch = 256.0000,  infoNCE loss  = 0.0254, time = 309.4731
+epoch = 257.0000,  infoNCE loss  = 0.0253, time = 261.4543
+epoch = 257.7273, validation infoNCE loss  = 0.0266, time = 47.8395
+epoch = 258.0000,  infoNCE loss  = 0.0253, time = 311.0045
+epoch = 259.0000,  infoNCE loss  = 0.0253, time = 260.7556
+epoch = 259.7727, validation infoNCE loss  = 0.0263, time = 45.9926
+epoch = 260.0000,  infoNCE loss  = 0.0253, time = 309.1915
+epoch = 261.0000,  infoNCE loss  = 0.0254, time = 261.9550
+epoch = 261.8182, validation infoNCE loss  = 0.0263, time = 47.8244
+epoch = 262.0000,  infoNCE loss  = 0.0254, time = 308.8715
+epoch = 263.0000,  infoNCE loss  = 0.0252, time = 261.6324
+epoch = 263.8636, validation infoNCE loss  = 0.0263, time = 47.8345
+epoch = 264.0000,  infoNCE loss  = 0.0253, time = 308.5514
+epoch = 265.0000,  infoNCE loss  = 0.0253, time = 264.4563
+epoch = 265.9091, validation infoNCE loss  = 0.0264, time = 47.6317
+epoch = 266.0000,  infoNCE loss  = 0.0252, time = 308.4593
+epoch = 267.0000,  infoNCE loss  = 0.0253, time = 263.0869
+epoch = 267.9545, validation infoNCE loss  = 0.0263, time = 48.3147
+epoch = 268.0000,  infoNCE loss  = 0.0252, time = 310.0979
+epoch = 269.0000,  infoNCE loss  = 0.0252, time = 265.4530
+epoch = 270.0000,  infoNCE loss  = 0.0251, time = 262.5754
+epoch = 270.0000, validation infoNCE loss  = 0.0263, time = 48.1262
+epoch = 271.0000,  infoNCE loss  = 0.0254, time = 262.7477
+epoch = 272.0000,  infoNCE loss  = 0.0254, time = 262.2808
+epoch = 272.0455, validation infoNCE loss  = 0.0265, time = 47.9065
+epoch = 273.0000,  infoNCE loss  = 0.0252, time = 313.4641
+epoch = 274.0000,  infoNCE loss  = 0.0252, time = 262.1625
+epoch = 274.0909, validation infoNCE loss  = 0.0262, time = 47.8578
+epoch = 275.0000,  infoNCE loss  = 0.0252, time = 311.0109
+epoch = 276.0000,  infoNCE loss  = 0.0251, time = 262.0169
+epoch = 276.1364, validation infoNCE loss  = 0.0261, time = 47.8958
+epoch = 277.0000,  infoNCE loss  = 0.0251, time = 313.3449
+epoch = 278.0000,  infoNCE loss  = 0.0251, time = 260.5956
+epoch = 278.1818, validation infoNCE loss  = 0.0261, time = 47.7322
+epoch = 279.0000,  infoNCE loss  = 0.0251, time = 310.5553
+epoch = 280.0000,  infoNCE loss  = 0.0256, time = 261.7356
+epoch = 280.2273, validation infoNCE loss  = 0.0264, time = 48.0548
+epoch = 281.0000,  infoNCE loss  = 0.0251, time = 314.4855
+epoch = 282.0000,  infoNCE loss  = 0.0251, time = 260.2753
+epoch = 282.2727, validation infoNCE loss  = 0.0262, time = 47.7159
+epoch = 283.0000,  infoNCE loss  = 0.0250, time = 310.1175
+epoch = 284.0000,  infoNCE loss  = 0.0250, time = 260.8026
+epoch = 284.3182, validation infoNCE loss  = 0.0260, time = 47.5862
+epoch = 285.0000,  infoNCE loss  = 0.0251, time = 311.3868
+epoch = 286.0000,  infoNCE loss  = 0.0250, time = 262.3643
+epoch = 286.3636, validation infoNCE loss  = 0.0259, time = 48.1633
+epoch = 287.0000,  infoNCE loss  = 0.0249, time = 311.2222
+epoch = 288.0000,  infoNCE loss  = 0.0249, time = 263.4787
+epoch = 288.4091, validation infoNCE loss  = 0.0259, time = 48.1459
+epoch = 289.0000,  infoNCE loss  = 0.0249, time = 314.1211
+epoch = 290.0000,  infoNCE loss  = 0.0248, time = 261.1002
+epoch = 290.4545, validation infoNCE loss  = 0.0260, time = 47.7738
+epoch = 291.0000,  infoNCE loss  = 0.0248, time = 309.3836
+epoch = 292.0000,  infoNCE loss  = 0.0249, time = 262.3268
+epoch = 292.5000, validation infoNCE loss  = 0.0260, time = 47.5787
+epoch = 293.0000,  infoNCE loss  = 0.0250, time = 313.4601
+epoch = 294.0000,  infoNCE loss  = 0.0248, time = 261.8309
+epoch = 294.5455, validation infoNCE loss  = 0.0260, time = 47.8854
+epoch = 295.0000,  infoNCE loss  = 0.0248, time = 310.6021
+epoch = 296.0000,  infoNCE loss  = 0.0248, time = 261.5789
+epoch = 296.5909, validation infoNCE loss  = 0.0260, time = 47.4959
+epoch = 297.0000,  infoNCE loss  = 0.0248, time = 310.9499
+epoch = 298.0000,  infoNCE loss  = 0.0250, time = 260.5559
+epoch = 298.6364, validation infoNCE loss  = 0.0259, time = 47.4712
+epoch = 299.0000,  infoNCE loss  = 0.0250, time = 307.6334
+epoch = 300.0000,  infoNCE loss  = 0.0249, time = 262.6040
+epoch = 300.6818, validation infoNCE loss  = 0.0261, time = 47.9576
+epoch = 301.0000,  infoNCE loss  = 0.0247, time = 311.0024
+epoch = 302.0000,  infoNCE loss  = 0.0247, time = 263.9452
+epoch = 302.7273, validation infoNCE loss  = 0.0259, time = 47.6327
+epoch = 303.0000,  infoNCE loss  = 0.0249, time = 308.2620
+epoch = 304.0000,  infoNCE loss  = 0.0248, time = 260.8166
+epoch = 304.7727, validation infoNCE loss  = 0.0258, time = 47.5938
+epoch = 305.0000,  infoNCE loss  = 0.0248, time = 311.9344
+epoch = 306.0000,  infoNCE loss  = 0.0247, time = 262.9166
+epoch = 306.8182, validation infoNCE loss  = 0.0260, time = 48.1497
+epoch = 307.0000,  infoNCE loss  = 0.0249, time = 310.8950
+epoch = 308.0000,  infoNCE loss  = 0.0249, time = 261.3126
+epoch = 308.8636, validation infoNCE loss  = 0.0259, time = 47.5460
+epoch = 309.0000,  infoNCE loss  = 0.0247, time = 308.9074
+epoch = 310.0000,  infoNCE loss  = 0.0247, time = 262.9320
+epoch = 310.9091, validation infoNCE loss  = 0.0257, time = 47.9924
+epoch = 311.0000,  infoNCE loss  = 0.0247, time = 309.2267
+epoch = 312.0000,  infoNCE loss  = 0.0248, time = 261.5392
+epoch = 312.9545, validation infoNCE loss  = 0.0272, time = 47.8010
+epoch = 313.0000,  infoNCE loss  = 0.0250, time = 309.2955
