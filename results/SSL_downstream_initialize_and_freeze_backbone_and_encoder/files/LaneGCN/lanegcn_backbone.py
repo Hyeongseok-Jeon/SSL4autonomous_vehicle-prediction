@@ -41,7 +41,7 @@ config["num_epochs"] = 50
 config["lr"] = [1e-3, 1e-4]
 config["lr_epochs"] = [32]
 config["lr_func"] = StepLR(config["lr"], config["lr_epochs"])
-config['root_path'] = root_path
+
 
 if "save_dir" not in config:
     config["save_dir"] = os.path.join(

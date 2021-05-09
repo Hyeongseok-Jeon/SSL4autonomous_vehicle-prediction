@@ -62,7 +62,7 @@ parser.add_argument(
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
 args = parser.parse_args()
-
+model = import_module(args.model)
 '''
 data_prev = torch.load('error_data_prev.pk', map_location = torch.device('cuda'))
 data_cur = torch.load('error_data_cur.pk', map_location = torch.device('cuda'))
@@ -79,7 +79,6 @@ def main():
     random.seed(seed)
 
     # Import all settings for experiment.
-    model = import_module(args.model)
     config, config_enc, Dataset, collate_fn, net, loss, opt = model.get_model(args)
 
     if config["horovod"]:
