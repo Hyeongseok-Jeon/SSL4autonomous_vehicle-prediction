@@ -51,8 +51,8 @@ if "save_dir" not in config:
 if not os.path.isabs(config["save_dir"]):
     config["save_dir"] = os.path.join(root_path, "results", config["save_dir"])
 
-config["batch_size"] = 64
-config["val_batch_size"] = 64
+config["batch_size"] = 128
+config["val_batch_size"] = 128
 config["workers"] = 0
 config["val_workers"] = config["workers"]
 
@@ -801,6 +801,7 @@ class PostProcess(nn.Module):
 
         cls = metrics["cls_loss"] / (metrics["num_cls"] + 1e-10)
         reg = metrics["reg_loss"] / (metrics["num_reg"] + 1e-10)
+        enc = metrics["loss_enc"] / metrics["loss_enc_cnt"]
         loss = cls + reg
 
         preds = np.concatenate(metrics["preds"], 0)
@@ -808,11 +809,18 @@ class PostProcess(nn.Module):
         has_preds = np.concatenate(metrics["has_preds"], 0)
         ade1, fde1, ade, fde, min_idcs = pred_metrics(preds, gt_preds, has_preds)
 
-        print(
-            "loss %2.4f %2.4f %2.4f, ade1 %2.4f, fde1 %2.4f, ade %2.4f, fde %2.4f"
-            % (loss, cls, reg, ade1, fde1, ade, fde)
-        )
-        print()
+        if 'loss_enc' in metrics.keys():
+            print(
+                "loss_enc %2.4f, loss %2.4f %2.4f %2.4f, ade1 %2.4f, fde1 %2.4f, ade %2.4f, fde %2.4f"
+                % (enc, loss, cls, reg, ade1, fde1, ade, fde)
+            )
+            print()
+        else:
+            print(
+                "loss %2.4f %2.4f %2.4f, ade1 %2.4f, fde1 %2.4f, ade %2.4f, fde %2.4f"
+                % (loss, cls, reg, ade1, fde1, ade, fde)
+            )
+            print()
 
 
 def pred_metrics(preds, gt_preds, has_preds):

@@ -200,11 +200,12 @@ class downstream_net(nn.Module):
         self.pred_net = PredNet(config)
 
     def forward(self, data):
-        if 'encoder' in self.config['freeze']:
-            with torch.no_grad():
-                actors = self.encoder(data)
-        else:
-            actors = self.encoder(data)
+        # if 'encoder' in self.config['freeze']:
+        #     with torch.no_grad():
+        #         actors = self.encoder(data)
+        # else:
+        actors = self.encoder(data)
+        out_enc = actors.copy()
         if isinstance(actors[0], list):
             actors = actors[0]
         actors = actors[1]
@@ -227,7 +228,7 @@ class downstream_net(nn.Module):
                 1, 1, 1, -1
             )
 
-        return out
+        return out, out_enc
 
 def get_model(args):
     encoder_name = args.encoder
@@ -235,7 +236,7 @@ def get_model(args):
     base_model = import_module(base_model_name+ '_backbone')
     encoder = import_module(encoder_name)
 
-    config, config_enc, Dataset, collate_fn, enc_net, _, _ = encoder.get_model(args)
+    config, config_enc, Dataset, collate_fn, enc_net, loss_enc, _ = encoder.get_model(args)
     _, _, _, _, loss, post_process, opt = base_model.get_model()
     if 'encoder' in args.transfer:
         pre_trained_weight = torch.load(config_enc['pre_trained_weight'])
@@ -280,6 +281,6 @@ def get_model(args):
 
     opt = Optimizer(params, config)
 
-    return config, config_enc, Dataset, collate_fn, model, loss, opt, post_process
+    return config, config_enc, Dataset, collate_fn, model, loss, loss_enc, opt, post_process
 
 # TODO: diable auxiliary in encoder

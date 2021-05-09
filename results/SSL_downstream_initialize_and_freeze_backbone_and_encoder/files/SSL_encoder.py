@@ -131,40 +131,78 @@ class SSL_encoder(nn.Module):
                 actors, veh_in_batch = self.base_net(data)
         else:
             actors, veh_in_batch = self.base_net(data)
-        batch_num = len(veh_in_batch)
-        veh_num_in_batch = sum(veh_in_batch)
-        ego_idx = [0] + [sum(veh_in_batch[:i + 1]) for i in range(batch_num - 1)]
-        target_idx = [1] + [sum(veh_in_batch[:i + 1]) + 1 for i in range(batch_num - 1)]
+        if 'encoder' in self.config['freeze']:
+            with torch.no_grad():
+                batch_num = len(veh_in_batch)
+                veh_num_in_batch = sum(veh_in_batch)
+                ego_idx = [0] + [sum(veh_in_batch[:i + 1]) for i in range(batch_num - 1)]
+                target_idx = [1] + [sum(veh_in_batch[:i + 1]) + 1 for i in range(batch_num - 1)]
 
-        positive_idx = [np.random.randint(1, data['action'][i].shape[1]) for i in range(batch_num)]
-        action_original = torch.cat([gpu(data['action'][i][0:1, 0, :, :]) for i in range(batch_num)])
-        action_augmented = torch.cat([gpu(data['action'][i][0:1, positive_idx[i], :, :]) for i in range(batch_num)])
+                positive_idx = [np.random.randint(1, data['action'][i].shape[1]) for i in range(batch_num)]
+                action_original = torch.cat([gpu(data['action'][i][0:1, 0, :, :]) for i in range(batch_num)])
+                action_augmented = torch.cat([gpu(data['action'][i][0:1, positive_idx[i], :, :]) for i in range(batch_num)])
 
-        actions = torch.cat([action_original, action_augmented])
-        hid_act = self.action_emb(actions)[:, -1, :]
-        hid_act_original = hid_act[:int(hid_act.shape[0] / 2)]
-        hid_act_augmented = hid_act[int(hid_act.shape[0] / 2):]
-        idx_mask = torch.arange(0, hid_act_original.shape[0])
+                actions = torch.cat([action_original, action_augmented])
+                hid_act = self.action_emb(actions)[:, -1, :]
+                hid_act_original = hid_act[:int(hid_act.shape[0] / 2)]
+                hid_act_augmented = hid_act[int(hid_act.shape[0] / 2):]
+                idx_mask = torch.arange(0, hid_act_original.shape[0])
 
-        sample_original = torch.cat([hid_act_original, actors[target_idx]], dim=1)
-        sample_augmented = torch.cat([hid_act_augmented, actors[target_idx]], dim=1)
+                sample_original = torch.cat([hid_act_original, actors[target_idx]], dim=1)
+                sample_augmented = torch.cat([hid_act_augmented, actors[target_idx]], dim=1)
 
-        positive_samples = sample_augmented
-        anchor_sample = sample_original
+                positive_samples = sample_augmented
+                anchor_sample = sample_original
 
-        samples = torch.cat([positive_samples, anchor_sample])
-        hid_tmp = self.tanh(self.out(samples))
-        hid_positive = torch.cat([hid_tmp[i].unsqueeze(0) for i in range(batch_num)])
-        hid_anchor = torch.cat([hid_tmp[i + batch_num].unsqueeze(0) for i in range(batch_num)])
-        if config_enc['auxiliary']:
+                samples = torch.cat([positive_samples, anchor_sample])
+                hid_tmp = self.tanh(self.out(samples))
+                hid_positive = torch.cat([hid_tmp[i].unsqueeze(0) for i in range(batch_num)])
+                hid_anchor = torch.cat([hid_tmp[i + batch_num].unsqueeze(0) for i in range(batch_num)])
+                if config_enc['auxiliary']:
+                    hid = [hid_positive, hid_anchor]
+                    hid_aux = self.auxiliary(hid_tmp)
+                    hid_positive = torch.cat([hid_aux[i].unsqueeze(0) for i in range(batch_num)])
+                    hid_anchor = torch.cat([hid_aux[i + batch_num].unsqueeze(0) for i in range(batch_num)])
+                    hid_aux = [hid_positive, hid_anchor]
+                    return [hid, hid_aux]
+
+                hid = [hid_positive, hid_anchor]
+        else:
+            batch_num = len(veh_in_batch)
+            veh_num_in_batch = sum(veh_in_batch)
+            ego_idx = [0] + [sum(veh_in_batch[:i + 1]) for i in range(batch_num - 1)]
+            target_idx = [1] + [sum(veh_in_batch[:i + 1]) + 1 for i in range(batch_num - 1)]
+
+            positive_idx = [np.random.randint(1, data['action'][i].shape[1]) for i in range(batch_num)]
+            action_original = torch.cat([gpu(data['action'][i][0:1, 0, :, :]) for i in range(batch_num)])
+            action_augmented = torch.cat([gpu(data['action'][i][0:1, positive_idx[i], :, :]) for i in range(batch_num)])
+
+            actions = torch.cat([action_original, action_augmented])
+            hid_act = self.action_emb(actions)[:, -1, :]
+            hid_act_original = hid_act[:int(hid_act.shape[0] / 2)]
+            hid_act_augmented = hid_act[int(hid_act.shape[0] / 2):]
+            idx_mask = torch.arange(0, hid_act_original.shape[0])
+
+            sample_original = torch.cat([hid_act_original, actors[target_idx]], dim=1)
+            sample_augmented = torch.cat([hid_act_augmented, actors[target_idx]], dim=1)
+
+            positive_samples = sample_augmented
+            anchor_sample = sample_original
+
+            samples = torch.cat([positive_samples, anchor_sample])
+            hid_tmp = self.tanh(self.out(samples))
+            hid_positive = torch.cat([hid_tmp[i].unsqueeze(0) for i in range(batch_num)])
+            hid_anchor = torch.cat([hid_tmp[i + batch_num].unsqueeze(0) for i in range(batch_num)])
+            if config_enc['auxiliary']:
+                hid = [hid_positive, hid_anchor]
+                hid_aux = self.auxiliary(hid_tmp)
+                hid_positive = torch.cat([hid_aux[i].unsqueeze(0) for i in range(batch_num)])
+                hid_anchor = torch.cat([hid_aux[i + batch_num].unsqueeze(0) for i in range(batch_num)])
+                hid_aux = [hid_positive, hid_anchor]
+                return [hid, hid_aux]
+
             hid = [hid_positive, hid_anchor]
-            hid_aux = self.auxiliary(hid_tmp)
-            hid_positive = torch.cat([hid_aux[i].unsqueeze(0) for i in range(batch_num)])
-            hid_anchor = torch.cat([hid_aux[i + batch_num].unsqueeze(0) for i in range(batch_num)])
-            hid_aux = [hid_positive, hid_anchor]
-            return [hid, hid_aux]
 
-        hid = [hid_positive, hid_anchor]
         return hid
 
 
