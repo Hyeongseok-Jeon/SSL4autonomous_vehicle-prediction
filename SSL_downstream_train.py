@@ -271,8 +271,10 @@ def val(config, data_loader, net, loss, post_process, epoch):
     for i, data in enumerate(data_loader):
         data = dict(data)
         with torch.no_grad():
-            output = net(data)
+            output, enc_out = net(data)
+            loss_out_enc = loss_enc(enc_out)
             loss_out = loss(output, data)
+            loss_out["loss_enc"] = loss_out_enc
             post_out = post_process(output, data)
             post_process.append(metrics, loss_out, post_out)
 
