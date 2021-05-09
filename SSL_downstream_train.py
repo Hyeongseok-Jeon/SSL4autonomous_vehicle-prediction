@@ -256,14 +256,14 @@ def train(epoch, config, save_dir, train_loader, net, loss,  loss_enc, post_proc
             metrics = dict()
 
         if num_iters % val_iters == 0:
-            val(config, val_loader, net, loss, post_process, epoch)
+            val(config, val_loader, net, loss,  loss_enc, post_process, epoch)
 
         if epoch >= config["num_epochs"]:
-            val(config, val_loader, net, loss, post_process, epoch)
+            val(config, val_loader, net, loss,  loss_enc, post_process, epoch)
             return
 
 
-def val(config, data_loader, net, loss, post_process, epoch):
+def val(config, data_loader, net, loss,  loss_enc, post_process, epoch):
     net.eval()
 
     start_time = time.time()
