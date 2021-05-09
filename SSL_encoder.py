@@ -8,12 +8,13 @@ from pytorch_metric_learning.distances import CosineSimilarity
 from pytorch_metric_learning.losses import NTXentLoss
 import copy
 import os
+import sys
 
 file_path = os.path.abspath(__file__)
 # file_path = os.getcwd() + '/LaneGCN/lanegcn.py'
 root_path = os.path.dirname(file_path)
 model_name = os.path.basename(file_path).split(".")[0]
-
+sys.path.insert(0, root_path)
 ### config ###
 config_enc = dict()
 config_action_emb = dict()
@@ -223,7 +224,7 @@ def get_model(args):
     config['freeze'] = args.freeze
     encoder = SSL_encoder(config, base_model)
     if 'backbone' in args.transfer:
-        pre_trained_weight = torch.load("LaneGCN/pre_trained" + '/36.000.ckpt')
+        pre_trained_weight = torch.load(root_path+"/LaneGCN/pre_trained" + '/36.000.ckpt')
         print('backbone is transferred')
         pretrained_dict = pre_trained_weight['state_dict']
         new_model_dict = encoder.base_net.state_dict()
