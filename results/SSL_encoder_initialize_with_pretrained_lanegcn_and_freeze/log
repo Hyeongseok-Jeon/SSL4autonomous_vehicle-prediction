@@ -168,3 +168,5 @@ epoch = 112.0000,  infoNCE loss  = 0.0297, time = 261.8998
 epoch = 112.5000, validation infoNCE loss  = 0.0322, time = 46.0537
 epoch = 113.0000,  infoNCE loss  = 0.0295, time = 306.7471
 epoch = 114.0000,  infoNCE loss  = 0.0295, time = 259.7721
+epoch = 114.5455, validation infoNCE loss  = 0.0321, time = 45.1285
+epoch = 115.0000,  infoNCE loss  = 0.0295, time = 305.6901
