@@ -143,15 +143,15 @@ def main():
                 if os.path.isdir(os.path.join(src_dir, f)):
                     shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
 
-
+    config["batch_size"] = 2048
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=True)
+    dataset = Dataset(config["train_split"], config, train=False)
     train_sampler = DistributedSampler(
         dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )
     train_loader = DataLoader(
         dataset,
-        batch_size=2048,
+        batch_size=config["batch_size"],
         num_workers=config["workers"],
         sampler=train_sampler,
         collate_fn=collate_fn,
