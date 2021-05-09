@@ -8,12 +8,13 @@ from pytorch_metric_learning.distances import CosineSimilarity
 from pytorch_metric_learning.losses import NTXentLoss
 import copy
 import os
+import sys
 
 file_path = os.path.abspath(__file__)
 # file_path = os.getcwd() + '/LaneGCN/lanegcn.py'
 root_path = os.path.dirname(file_path)
 model_name = os.path.basename(file_path).split(".")[0]
-
+sys.path.insert(0, root_path)
 ### config ###
 config_enc = dict()
 config_action_emb = dict()
@@ -26,7 +27,7 @@ config_action_emb["n_hid"] = 128
 config_enc['action_emb'] = config_action_emb
 config_enc['auxiliary'] = True
 config_enc['pre_trained'] = True
-config_enc['pre_trained_weight'] = os.path.join(root_path, 'results', 'SSL_encoder_initialize_with_pretrained_lanegcn_and_freeze', '300.000.ckpt')
+config_enc['pre_trained_weight'] = os.path.join(root_path, 'results', 'SSL_encoder_initialize_with_pretrained_lanegcn_and_freeze', '50.000.ckpt')
 
 if "save_dir" not in config_enc:
     config_enc["save_dir"] = os.path.join(
@@ -130,40 +131,78 @@ class SSL_encoder(nn.Module):
                 actors, veh_in_batch = self.base_net(data)
         else:
             actors, veh_in_batch = self.base_net(data)
-        batch_num = len(veh_in_batch)
-        veh_num_in_batch = sum(veh_in_batch)
-        ego_idx = [0] + [sum(veh_in_batch[:i + 1]) for i in range(batch_num - 1)]
-        target_idx = [1] + [sum(veh_in_batch[:i + 1]) + 1 for i in range(batch_num - 1)]
+        if 'encoder' in self.config['freeze']:
+            with torch.no_grad():
+                batch_num = len(veh_in_batch)
+                veh_num_in_batch = sum(veh_in_batch)
+                ego_idx = [0] + [sum(veh_in_batch[:i + 1]) for i in range(batch_num - 1)]
+                target_idx = [1] + [sum(veh_in_batch[:i + 1]) + 1 for i in range(batch_num - 1)]
 
-        positive_idx = [np.random.randint(1, data['action'][i].shape[1]) for i in range(batch_num)]
-        action_original = torch.cat([gpu(data['action'][i][0:1, 0, :, :]) for i in range(batch_num)])
-        action_augmented = torch.cat([gpu(data['action'][i][0:1, positive_idx[i], :, :]) for i in range(batch_num)])
+                positive_idx = [np.random.randint(1, data['action'][i].shape[1]) for i in range(batch_num)]
+                action_original = torch.cat([gpu(data['action'][i][0:1, 0, :, :]) for i in range(batch_num)])
+                action_augmented = torch.cat([gpu(data['action'][i][0:1, positive_idx[i], :, :]) for i in range(batch_num)])
 
-        actions = torch.cat([action_original, action_augmented])
-        hid_act = self.action_emb(actions)[:, -1, :]
-        hid_act_original = hid_act[:int(hid_act.shape[0] / 2)]
-        hid_act_augmented = hid_act[int(hid_act.shape[0] / 2):]
-        idx_mask = torch.arange(0, hid_act_original.shape[0])
+                actions = torch.cat([action_original, action_augmented])
+                hid_act = self.action_emb(actions)[:, -1, :]
+                hid_act_original = hid_act[:int(hid_act.shape[0] / 2)]
+                hid_act_augmented = hid_act[int(hid_act.shape[0] / 2):]
+                idx_mask = torch.arange(0, hid_act_original.shape[0])
 
-        sample_original = torch.cat([hid_act_original, actors[target_idx]], dim=1)
-        sample_augmented = torch.cat([hid_act_augmented, actors[target_idx]], dim=1)
+                sample_original = torch.cat([hid_act_original, actors[target_idx]], dim=1)
+                sample_augmented = torch.cat([hid_act_augmented, actors[target_idx]], dim=1)
 
-        positive_samples = sample_augmented
-        anchor_sample = sample_original
+                positive_samples = sample_augmented
+                anchor_sample = sample_original
 
-        samples = torch.cat([positive_samples, anchor_sample])
-        hid_tmp = self.tanh(self.out(samples))
-        hid_positive = torch.cat([hid_tmp[i].unsqueeze(0) for i in range(batch_num)])
-        hid_anchor = torch.cat([hid_tmp[i + batch_num].unsqueeze(0) for i in range(batch_num)])
-        if config_enc['auxiliary']:
+                samples = torch.cat([positive_samples, anchor_sample])
+                hid_tmp = self.tanh(self.out(samples))
+                hid_positive = torch.cat([hid_tmp[i].unsqueeze(0) for i in range(batch_num)])
+                hid_anchor = torch.cat([hid_tmp[i + batch_num].unsqueeze(0) for i in range(batch_num)])
+                if config_enc['auxiliary']:
+                    hid = [hid_positive, hid_anchor]
+                    hid_aux = self.auxiliary(hid_tmp)
+                    hid_positive = torch.cat([hid_aux[i].unsqueeze(0) for i in range(batch_num)])
+                    hid_anchor = torch.cat([hid_aux[i + batch_num].unsqueeze(0) for i in range(batch_num)])
+                    hid_aux = [hid_positive, hid_anchor]
+                    return [hid, hid_aux]
+
+                hid = [hid_positive, hid_anchor]
+        else:
+            batch_num = len(veh_in_batch)
+            veh_num_in_batch = sum(veh_in_batch)
+            ego_idx = [0] + [sum(veh_in_batch[:i + 1]) for i in range(batch_num - 1)]
+            target_idx = [1] + [sum(veh_in_batch[:i + 1]) + 1 for i in range(batch_num - 1)]
+
+            positive_idx = [np.random.randint(1, data['action'][i].shape[1]) for i in range(batch_num)]
+            action_original = torch.cat([gpu(data['action'][i][0:1, 0, :, :]) for i in range(batch_num)])
+            action_augmented = torch.cat([gpu(data['action'][i][0:1, positive_idx[i], :, :]) for i in range(batch_num)])
+
+            actions = torch.cat([action_original, action_augmented])
+            hid_act = self.action_emb(actions)[:, -1, :]
+            hid_act_original = hid_act[:int(hid_act.shape[0] / 2)]
+            hid_act_augmented = hid_act[int(hid_act.shape[0] / 2):]
+            idx_mask = torch.arange(0, hid_act_original.shape[0])
+
+            sample_original = torch.cat([hid_act_original, actors[target_idx]], dim=1)
+            sample_augmented = torch.cat([hid_act_augmented, actors[target_idx]], dim=1)
+
+            positive_samples = sample_augmented
+            anchor_sample = sample_original
+
+            samples = torch.cat([positive_samples, anchor_sample])
+            hid_tmp = self.tanh(self.out(samples))
+            hid_positive = torch.cat([hid_tmp[i].unsqueeze(0) for i in range(batch_num)])
+            hid_anchor = torch.cat([hid_tmp[i + batch_num].unsqueeze(0) for i in range(batch_num)])
+            if config_enc['auxiliary']:
+                hid = [hid_positive, hid_anchor]
+                hid_aux = self.auxiliary(hid_tmp)
+                hid_positive = torch.cat([hid_aux[i].unsqueeze(0) for i in range(batch_num)])
+                hid_anchor = torch.cat([hid_aux[i + batch_num].unsqueeze(0) for i in range(batch_num)])
+                hid_aux = [hid_positive, hid_anchor]
+                return [hid, hid_aux]
+
             hid = [hid_positive, hid_anchor]
-            hid_aux = self.auxiliary(hid_tmp)
-            hid_positive = torch.cat([hid_aux[i].unsqueeze(0) for i in range(batch_num)])
-            hid_anchor = torch.cat([hid_aux[i + batch_num].unsqueeze(0) for i in range(batch_num)])
-            hid_aux = [hid_positive, hid_anchor]
-            return [hid, hid_aux]
 
-        hid = [hid_positive, hid_anchor]
         return hid
 
 
@@ -223,7 +262,7 @@ def get_model(args):
     config['freeze'] = args.freeze
     encoder = SSL_encoder(config, base_model)
     if 'backbone' in args.transfer:
-        pre_trained_weight = torch.load("LaneGCN/pre_trained" + '/36.000.ckpt')
+        pre_trained_weight = torch.load(root_path+"/LaneGCN/pre_trained" + '/36.000.ckpt')
         print('backbone is transferred')
         pretrained_dict = pre_trained_weight['state_dict']
         new_model_dict = encoder.base_net.state_dict()

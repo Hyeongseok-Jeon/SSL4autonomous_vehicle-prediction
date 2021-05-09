@@ -168,3 +168,4 @@ epoch = 112.0000,  infoNCE loss  = 0.0297, time = 261.8998
 epoch = 112.5000, validation infoNCE loss  = 0.0322, time = 46.0537
 epoch = 113.0000,  infoNCE loss  = 0.0295, time = 306.7471
 epoch = 114.0000,  infoNCE loss  = 0.0295, time = 259.7721
+logging directory :  /home/jhs/Desktop/SSL4autonomous_vehicle-prediction/results/SSL_encoder_initialize_with_pretrained_lanegcn_and_freeze

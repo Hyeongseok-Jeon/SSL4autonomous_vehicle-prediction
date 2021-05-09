@@ -40,7 +40,7 @@ parser.add_argument(
     "-m", "--model", default="SSL_downstream", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument(
-    "--freeze", default=["backbone", "encoder"], type=list
+    "--freeze", default=["encoder"], type=list
 )
 parser.add_argument(
     "--transfer", default=["backbone", "encoder"], type=list
@@ -76,7 +76,7 @@ def main():
 
     # Import all settings for experiment.
 
-    config, config_enc, Dataset, collate_fn, net, loss, opt, post_process = model.get_model(args)
+    config, config_enc, Dataset, collate_fn, net, loss, loss_enc, opt, post_process = model.get_model(args)
 
     if config["horovod"]:
         opt.opt = hvd.DistributedOptimizer(
@@ -139,7 +139,12 @@ def main():
                 if os.path.isfile(os.path.join(src_dir, f)):
                     shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
                 if os.path.isdir(os.path.join(src_dir, f)):
-                    shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+                    try:
+                        shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+                    except:
+                        shutil.rmtree(os.path.join(dst_dir, f))
+                        shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+
 
         results_dirs = os.path.join(root_path, 'results')
         dir_list = os.listdir(results_dirs)
@@ -153,7 +158,7 @@ def main():
                     shutil.copy(os.path.join(results_dirs+'/'+dir, f), os.path.join(dst_dir, f))
 
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=True)
+    dataset = Dataset(config["train_split"], config, train=False)
     train_sampler = DistributedSampler(
         dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )
@@ -187,7 +192,7 @@ def main():
     epoch = config["epoch"]
     remaining_epochs = int(np.ceil(config["num_epochs"] - epoch))
     for i in range(remaining_epochs):
-        train(epoch + i, config, save_dir, train_loader, net, loss, post_process, opt, val_loader)
+        train(epoch + i, config, save_dir, train_loader, net, loss,  loss_enc, post_process, opt, val_loader)
 
 
 def worker_init_fn(pid):
@@ -197,7 +202,7 @@ def worker_init_fn(pid):
     random.seed(random_seed)
 
 
-def train(epoch, config, save_dir, train_loader, net, loss, post_process, opt, val_loader=None):
+def train(epoch, config, save_dir, train_loader, net, loss,  loss_enc, post_process, opt, val_loader=None):
     train_loader.sampler.set_epoch(int(epoch))
     if 'backbone' in args.freeze:
         net.encoder.base_net.eval()
@@ -219,13 +224,20 @@ def train(epoch, config, save_dir, train_loader, net, loss, post_process, opt, v
         epoch += epoch_per_batch
         data = dict(data)
 
-        output = net(data)
+        output, enc_out = net(data)
+        loss_out_enc = loss_enc(enc_out)
         loss_out = loss(output, data)
+        loss_out["loss_enc"] = loss_out_enc
         post_out = post_process(output, data)
         post_process.append(metrics, loss_out, post_out)
+        if i == 0:
+            metrics['loss_enc_cnt'] = 1
+        else:
+            metrics['loss_enc_cnt'] = metrics['loss_enc_cnt'] + 1
 
         opt.zero_grad()
-        loss_out["loss"].backward()
+        loss_back = loss_out["loss_enc"] + loss_out["loss"]
+        loss_back.backward()
         lr = opt.step(epoch)
 
         num_iters = int(np.round(epoch * num_batches))

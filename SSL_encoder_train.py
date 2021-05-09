@@ -141,7 +141,11 @@ def main():
                 if os.path.isfile(os.path.join(src_dir, f)):
                     shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
                 if os.path.isdir(os.path.join(src_dir, f)):
-                    shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+                    try:
+                        shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+                    except:
+                        shutil.rmtree(os.path.join(dst_dir, f))
+                        shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
 
     config["batch_size"] = 2048
     # Data loader for training
