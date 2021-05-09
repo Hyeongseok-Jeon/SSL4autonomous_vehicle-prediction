@@ -15,7 +15,8 @@ import time
 import shutil
 from importlib import import_module
 from numbers import Number
-
+sys.path.extend(['/home/jhs/Desktop/SSL4autonomous_vehicle-prediction/LaneGCN'])
+sys.path.extend(['/home/user/data/HyeongseokJeon/SSL4autonomous_vehicle-prediction/LaneGCN'])
 from tqdm import tqdm
 import torch
 from torch.utils.data import Sampler, DataLoader
