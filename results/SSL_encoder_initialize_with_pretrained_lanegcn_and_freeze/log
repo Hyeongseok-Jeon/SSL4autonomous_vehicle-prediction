@@ -656,3 +656,9 @@ epoch = 438.0000,  infoNCE loss  = 0.0236, time = 310.4835
 epoch = 439.0000,  infoNCE loss  = 0.0235, time = 260.4359
 epoch = 439.7727, validation infoNCE loss  = 0.0249, time = 47.9896
 epoch = 440.0000,  infoNCE loss  = 0.0235, time = 310.5497
+epoch = 441.0000,  infoNCE loss  = 0.0235, time = 262.0208
+epoch = 441.8182, validation infoNCE loss  = 0.0276, time = 46.4754
+epoch = 442.0000,  infoNCE loss  = 0.0240, time = 308.6839
+epoch = 443.0000,  infoNCE loss  = 0.0237, time = 263.2972
+epoch = 443.8636, validation infoNCE loss  = 0.0250, time = 47.4921
+epoch = 444.0000,  infoNCE loss  = 0.0237, time = 309.1434
