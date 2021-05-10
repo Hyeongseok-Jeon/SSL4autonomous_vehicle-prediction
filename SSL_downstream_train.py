@@ -277,7 +277,10 @@ def val(config, data_loader, net, loss, loss_enc, post_process, epoch):
             loss_out["loss_enc"] = loss_out_enc
             post_out = post_process(output, data)
             post_process.append(metrics, loss_out, post_out)
-
+        if i == 0:
+            metrics['loss_enc_cnt'] = 1
+        else:
+            metrics['loss_enc_cnt'] = metrics['loss_enc_cnt'] + 1
     dt = time.time() - start_time
     metrics = sync(metrics)
     if hvd.rank() == 0:
