@@ -41,7 +41,7 @@ parser.add_argument(
     "-m", "--model", default="SSL_downstream", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument(
-    "--freeze", default=["encoder"], type=list
+    "--freeze", default=[], type=list
 )
 parser.add_argument(
     "--transfer", default=["backbone", "encoder"], type=list
@@ -237,7 +237,7 @@ def train(epoch, config, save_dir, train_loader, net, loss,  loss_enc, post_proc
             metrics['loss_enc_cnt'] = metrics['loss_enc_cnt'] + 1
 
         opt.zero_grad()
-        loss_back = loss_out["loss_enc"] + loss_out["loss"]
+        loss_back = 10 * loss_out["loss_enc"] + loss_out["loss"]
         loss_back.backward()
         lr = opt.step(epoch)
 
