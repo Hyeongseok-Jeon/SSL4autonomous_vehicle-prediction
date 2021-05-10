@@ -120,6 +120,34 @@ def main():
             for f in files:
                 shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
 
+        src_dirs = [os.path.join(root_path, 'LaneGCN')]
+        dst_dirs = [os.path.join(save_dir, "files", 'LaneGCN')]
+        for src_dir, dst_dir in zip(src_dirs, dst_dirs):
+            files = [f for f in os.listdir(src_dir) if f.endswith(".py") or f.startswith("pre_trained")]
+            if not os.path.exists(dst_dir):
+                os.makedirs(dst_dir)
+            for f in files:
+                if os.path.isfile(os.path.join(src_dir, f)):
+                    shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+                if os.path.isdir(os.path.join(src_dir, f)):
+                    try:
+                        shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+                    except:
+                        shutil.rmtree(os.path.join(dst_dir, f))
+                        shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+
+
+        results_dirs = os.path.join(root_path, 'results')
+        dir_list = os.listdir(results_dirs)
+        for dir in dir_list:
+            if 'SSL_encoder' in dir:
+                dst_dir = os.path.join(save_dir, "files", 'results', dir)
+                files = [f for f in os.listdir(results_dirs+'/'+dir) if f.endswith(".ckpt") and '0' in f]
+                if not os.path.exists(dst_dir):
+                    os.makedirs(dst_dir)
+                for f in files:
+                    shutil.copy(os.path.join(results_dirs+'/'+dir, f), os.path.join(dst_dir, f))
+
     # Data loader for training
     dataset = Dataset(config["train_split"], config, train=True)
     train_sampler = DistributedSampler(
