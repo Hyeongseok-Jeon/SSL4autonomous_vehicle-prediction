@@ -190,7 +190,6 @@ def main():
         train(epoch + i, config, save_dir, config_enc, train_loader, net, loss, opt, val_loader)
 
 
-
 def worker_init_fn(pid):
     np_seed = hvd.rank() * 1024 + int(pid)
     np.random.seed(np_seed)
