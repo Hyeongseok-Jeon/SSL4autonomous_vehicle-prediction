@@ -44,7 +44,7 @@ parser.add_argument(
     "--freeze", default=[], type=list
 )
 parser.add_argument(
-    "--transfer", default=["backbone", "encoder"], type=list
+    "--transfer", default=[], type=list
 )
 parser.add_argument(
     "--encoder", default="SSL_encoder", type=str, metavar="MODEL", help="model name"
@@ -53,7 +53,7 @@ parser.add_argument(
     "--base_model", default="LaneGCN.lanegcn", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument(
-    "--memo", default="_initialize_and_freeze_backbone_and_encoder"
+    "--memo", default="_baseline"
 )
 parser.add_argument("--eval", action="store_true")
 parser.add_argument(
@@ -237,7 +237,8 @@ def train(epoch, config, save_dir, train_loader, net, loss,  loss_enc, post_proc
             metrics['loss_enc_cnt'] = metrics['loss_enc_cnt'] + 1
 
         opt.zero_grad()
-        loss_back = 10 * loss_out["loss_enc"] + loss_out["loss"]
+        # loss_back = 10 * loss_out["loss_enc"] + loss_out["loss"]
+        loss_back = loss_out["loss"]
         loss_back.backward()
         lr = opt.step(epoch)
 
