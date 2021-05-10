@@ -41,7 +41,7 @@ parser.add_argument(
     "-m", "--model", default="SSL_downstream", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument(
-    "--freeze", default=["encoder"], type=list
+    "--freeze", default=[], type=list
 )
 parser.add_argument(
     "--transfer", default=["backbone", "encoder"], type=list
@@ -237,7 +237,7 @@ def train(epoch, config, save_dir, train_loader, net, loss,  loss_enc, post_proc
             metrics['loss_enc_cnt'] = metrics['loss_enc_cnt'] + 1
 
         opt.zero_grad()
-        loss_back = loss_out["loss_enc"] + loss_out["loss"]
+        loss_back = 10 * loss_out["loss_enc"] + loss_out["loss"]
         loss_back.backward()
         lr = opt.step(epoch)
 
@@ -256,14 +256,14 @@ def train(epoch, config, save_dir, train_loader, net, loss,  loss_enc, post_proc
             metrics = dict()
 
         if num_iters % val_iters == 0:
-            val(config, val_loader, net, loss,  loss_enc, post_process, epoch)
+            val(config, val_loader, net, loss, loss_enc, post_process, epoch)
 
         if epoch >= config["num_epochs"]:
-            val(config, val_loader, net, loss,  loss_enc, post_process, epoch)
+            val(config, val_loader, net, loss, loss_enc, post_process, epoch)
             return
 
 
-def val(config, data_loader, net, loss,  loss_enc, post_process, epoch):
+def val(config, data_loader, net, loss, loss_enc, post_process, epoch):
     net.eval()
 
     start_time = time.time()
@@ -277,7 +277,10 @@ def val(config, data_loader, net, loss,  loss_enc, post_process, epoch):
             loss_out["loss_enc"] = loss_out_enc
             post_out = post_process(output, data)
             post_process.append(metrics, loss_out, post_out)
-
+        if i == 0:
+            metrics['loss_enc_cnt'] = 1
+        else:
+            metrics['loss_enc_cnt'] = metrics['loss_enc_cnt'] + 1
     dt = time.time() - start_time
     metrics = sync(metrics)
     if hvd.rank() == 0:
