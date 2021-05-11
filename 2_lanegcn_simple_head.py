@@ -262,7 +262,7 @@ class PredLoss(nn.Module):
         loss_out["num_reg"] = 0
 
         num_mods, num_preds = self.config["num_mods"], self.config["num_preds"]
-        assert (has_preds.all())
+        # assert (has_preds.all())
 
         last = has_preds.float() + 0.1 * torch.arange(num_preds).float().to(
             has_preds.device
