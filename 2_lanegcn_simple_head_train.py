@@ -39,10 +39,9 @@ root_path = os.getcwd()
 
 sys.path.insert(0, root_path)
 
-
 parser = argparse.ArgumentParser(description="Fuse Detection in Pytorch")
 parser.add_argument(
-    "-m", "--model", default="lanegcn_simple_head", type=str, metavar="MODEL", help="model name"
+    "-m", "--model", default="2_lanegcn_simple_head", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument("--eval", action="store_true")
 parser.add_argument(
@@ -149,7 +148,7 @@ def main():
         #             shutil.copy(os.path.join(results_dirs+'/'+dir, f), os.path.join(dst_dir, f))
 
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=True)
+    dataset = Dataset(config["train_split"], config, train=False)
     train_sampler = DistributedSampler(
         dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )
