@@ -22,8 +22,8 @@ from numpy import float64, ndarray
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 
-# file_path = os.path.abspath(__file__)
-file_path = os.getcwd() + '/LaneGCN/lanegcn.py'
+file_path = os.path.abspath(__file__)
+# file_path = os.getcwd() + '/LaneGCN/lanegcn.py'
 root_path = os.path.dirname(file_path)
 model_name = os.path.basename(file_path).split(".")[0]
 
@@ -67,10 +67,10 @@ config["test_split"] = os.path.join(root_path, "dataset/test_obs/data")
 # Preprocessed Dataset
 config["preprocess"] = True # whether use preprocess or not
 config["preprocess_train"] = os.path.join(
-    root_path, "dataset","preprocess", "train_crs_dist6_angle90_mod.p"
+    root_path, "LaneGCN", "dataset","preprocess", "train_crs_dist6_angle90_mod.p"
 )
 config["preprocess_val"] = os.path.join(
-    root_path,"dataset", "preprocess", "val_crs_dist6_angle90_mod.p"
+    root_path, "LaneGCN", "dataset", "preprocess", "val_crs_dist6_angle90_mod.p"
 )
 config['preprocess_test'] = os.path.join(root_path, "dataset",'preprocess', 'test_test.p')
 
