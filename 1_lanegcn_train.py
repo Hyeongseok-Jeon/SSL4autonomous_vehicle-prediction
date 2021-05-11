@@ -42,7 +42,7 @@ sys.path.insert(0, root_path)
 
 parser = argparse.ArgumentParser(description="Fuse Detection in Pytorch")
 parser.add_argument(
-    "-m", "--model", default="LaneGCN.lanegcn", type=str, metavar="MODEL", help="model name"
+    "-m", "--model", default="lanegcn", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument("--eval", action="store_true")
 parser.add_argument(
@@ -56,6 +56,8 @@ parser.add_argument(
 )
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
+args = parser.parse_args()
+model = import_module(args.model)
 
 def main():
     seed = hvd.rank()
@@ -65,8 +67,6 @@ def main():
     random.seed(seed)
 
     # Import all settings for experiment.
-    args = parser.parse_args()
-    model = import_module(args.model)
     config, Dataset, collate_fn, net, loss, post_process, opt = model.get_model()
 
     if config["horovod"]:
@@ -224,7 +224,7 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
         if hvd.rank() == 0 and (
             num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
-            save_ckpt(net, opt, config["save_dir"], epoch)
+            save_ckpt(net, opt, config["save_dir"] + args.memo, epoch)
 
         if num_iters % display_iters == 0:
             dt = time.time() - start_time
