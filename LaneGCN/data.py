@@ -193,7 +193,10 @@ class ArgoDataset(Dataset):
             [np.sin(theta), np.cos(theta)]], np.float32)
 
         feats, ctrs, gt_preds, has_preds, gt_hists = [], [], [], [], []
-        for traj, step in zip(data['trajs'], data['steps']):
+        for veh in range(len(data['trajs'])):
+            traj = data['trajs'][veh]
+            step = data['steps'][veh]
+        # for traj, step in zip(data['trajs'], data['steps']):
             if 19 not in step:
                 continue
 
@@ -223,7 +226,7 @@ class ArgoDataset(Dataset):
             feat[step, 2] = 1.0
 
             x_min, x_max, y_min, y_max = self.config['pred_range']
-            if feat[-1, 0] < x_min or feat[-1, 0] > x_max or feat[-1, 1] < y_min or feat[-1, 1] > y_max:
+            if (feat[-1, 0] < x_min or feat[-1, 0] > x_max or feat[-1, 1] < y_min or feat[-1, 1] > y_max) and veh > 1:
                 continue
             traj_save = np.zeros(shape=(20, 2))
             traj_save[-traj.shape[0]:, :] = traj

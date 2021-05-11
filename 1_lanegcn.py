@@ -50,8 +50,8 @@ if "save_dir" not in config:
 if not os.path.isabs(config["save_dir"]):
     config["save_dir"] = os.path.join(root_path, "results", config["save_dir"])
 
-config["batch_size"] = 64
-config["val_batch_size"] = 64
+config["batch_size"] = 32
+config["val_batch_size"] = 32
 config["workers"] = 0
 config["val_workers"] = config["workers"]
 
@@ -86,7 +86,7 @@ config["actor2actor_dist"] = 100.0
 config["pred_size"] = 30
 config["pred_step"] = 1
 config["num_preds"] = config["pred_size"] // config["pred_step"]
-config["num_mods"] = 1
+config["num_mods"] = 6
 config["cls_coef"] = 1.0
 config["reg_coef"] = 1.0
 config["mgn"] = 0.2
