@@ -5,6 +5,7 @@
 import numpy as np
 import os
 import sys
+
 sys.path.extend(['/home/jhs/Desktop/SSL4autonomous_vehicle-prediction/LaneGCN'])
 sys.path.extend(['/home/user/data/HyeongseokJeon/SSL4autonomous_vehicle-prediction/LaneGCN'])
 from fractions import gcd
@@ -15,12 +16,11 @@ from torch import Tensor, nn
 from torch.nn import functional as F
 
 from data import ArgoDataset, collate_fn
-from utils import gpu, to_long,  Optimizer, StepLR
+from utils import gpu, to_long, Optimizer, StepLR
 
 from layers import Conv1d, Res1d, Linear, LinearRes, Null
 from numpy import float64, ndarray
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
-
 
 file_path = os.path.abspath(__file__)
 # file_path = os.getcwd() + '/LaneGCN/lanegcn.py'
@@ -41,7 +41,6 @@ config["lr"] = [1e-3, 1e-4]
 config["lr_epochs"] = [32]
 config["lr_func"] = StepLR(config["lr"], config["lr_epochs"])
 
-
 if "save_dir" not in config:
     config["save_dir"] = os.path.join(
         root_path, "results", model_name
@@ -55,7 +54,6 @@ config["val_batch_size"] = 32
 config["workers"] = 0
 config["val_workers"] = config["workers"]
 
-
 """Dataset"""
 # Raw Dataset
 config["train_split"] = os.path.join(
@@ -65,14 +63,14 @@ config["val_split"] = os.path.join(root_path, "dataset/val/data")
 config["test_split"] = os.path.join(root_path, "dataset/test_obs/data")
 
 # Preprocessed Dataset
-config["preprocess"] = True # whether use preprocess or not
+config["preprocess"] = True  # whether use preprocess or not
 config["preprocess_train"] = os.path.join(
-    root_path, "LaneGCN", "dataset","preprocess", "train_crs_dist6_angle90_mod.p"
+    root_path, "LaneGCN", "dataset", "preprocess", "train_crs_dist6_angle90_mod.p"
 )
 config["preprocess_val"] = os.path.join(
     root_path, "LaneGCN", "dataset", "preprocess", "val_crs_dist6_angle90_mod.p"
 )
-config['preprocess_test'] = os.path.join(root_path, "dataset",'preprocess', 'test_test.p')
+config['preprocess_test'] = os.path.join(root_path, "dataset", 'preprocess', 'test_test.p')
 
 """Model"""
 config["rot_aug"] = False
@@ -92,6 +90,8 @@ config["reg_coef"] = 1.0
 config["mgn"] = 0.2
 config["cls_th"] = 2.0
 config["cls_ignore"] = 0.2
+
+
 ### end of config ###
 
 class Net(nn.Module):
@@ -113,6 +113,7 @@ class Net(nn.Module):
         4. PredNet: prediction header for motion forecasting using
            feature from A2A
     """
+
     def __init__(self, config):
         super(Net, self).__init__()
         self.config = config
@@ -152,7 +153,6 @@ class Net(nn.Module):
                 1, 1, 1, -1
             )
         return out
-
 
 
 def actor_gather(actors: List[Tensor]) -> Tuple[Tensor, List[Tensor]]:
@@ -216,6 +216,7 @@ class ActorNet(nn.Module):
     """
     Actor feature extractor with Conv1D
     """
+
     def __init__(self, config):
         super(ActorNet, self).__init__()
         self.config = config
@@ -270,6 +271,7 @@ class MapNet(nn.Module):
     """
     Map Graph feature extractor with LaneGraphCNN
     """
+
     def __init__(self, config):
         super(MapNet, self).__init__()
         self.config = config
@@ -313,9 +315,9 @@ class MapNet(nn.Module):
 
     def forward(self, graph):
         if (
-            len(graph["feats"]) == 0
-            or len(graph["pre"][-1]["u"]) == 0
-            or len(graph["suc"][-1]["u"]) == 0
+                len(graph["feats"]) == 0
+                or len(graph["pre"][-1]["u"]) == 0
+                or len(graph["suc"][-1]["u"]) == 0
         ):
             temp = graph["feats"]
             return (
@@ -371,6 +373,7 @@ class A2M(nn.Module):
     Actor to Map Fusion:  fuses real-time traffic information from
     actor nodes to lane nodes
     """
+
     def __init__(self, config):
         super(A2M, self).__init__()
         self.config = config
@@ -415,6 +418,7 @@ class M2M(nn.Module):
     The lane to lane block: propagates information over lane
             graphs and updates the features of lane nodes
     """
+
     def __init__(self, config):
         super(M2M, self).__init__()
         self.config = config
@@ -488,6 +492,7 @@ class M2A(nn.Module):
     The lane to actor block fuses updated
         map information from lane nodes to actor nodes
     """
+
     def __init__(self, config):
         super(M2A, self).__init__()
         self.config = config
@@ -520,6 +525,7 @@ class A2A(nn.Module):
     """
     The actor to actor block performs interactions among actors.
     """
+
     def __init__(self, config):
         super(A2A, self).__init__()
         self.config = config
@@ -579,6 +585,7 @@ class PredNet(nn.Module):
     """
     Final motion forecasting with Linear Residual block
     """
+
     def __init__(self, config):
         super(PredNet, self).__init__()
         self.config = config
@@ -639,6 +646,7 @@ class Att(nn.Module):
     Attention block to pass context nodes information to target nodes
     This is used in Actor2Map, Actor2Actor, Map2Actor and Map2Map
     """
+
     def __init__(self, n_agt: int, n_ctx: int) -> None:
         super(Att, self).__init__()
         norm = "GN"
@@ -761,7 +769,7 @@ class PredLoss(nn.Module):
         loss_out["num_reg"] = 0
 
         num_mods, num_preds = self.config["num_mods"], self.config["num_preds"]
-        # assert(has_preds.all())
+        assert(has_preds.all())
 
         last = has_preds.float() + 0.1 * torch.arange(num_preds).float().to(
             has_preds.device
@@ -781,8 +789,8 @@ class PredLoss(nn.Module):
             dist.append(
                 torch.sqrt(
                     (
-                        (reg[row_idcs, j, last_idcs] - gt_preds[row_idcs, last_idcs])
-                        ** 2
+                            (reg[row_idcs, j, last_idcs] - gt_preds[row_idcs, last_idcs])
+                            ** 2
                     ).sum(1)
                 )
             )
@@ -797,7 +805,7 @@ class PredLoss(nn.Module):
         mask = mgn < self.config["mgn"]
         coef = self.config["cls_coef"]
         loss_out["cls_loss"] += coef * (
-            self.config["mgn"] * mask.sum() - mgn[mask].sum()
+                self.config["mgn"] * mask.sum() - mgn[mask].sum()
         )
         loss_out["num_cls"] += mask.sum().item()
 
@@ -819,7 +827,7 @@ class Loss(nn.Module):
     def forward(self, out: Dict, data: Dict) -> Dict:
         loss_out = self.pred_loss(out, gpu(data["gt_preds"]), gpu(data["has_preds"]))
         loss_out["loss"] = loss_out["cls_loss"] / (
-            loss_out["num_cls"] + 1e-10
+                loss_out["num_cls"] + 1e-10
         ) + loss_out["reg_loss"] / (loss_out["num_reg"] + 1e-10)
         return loss_out
 
@@ -829,14 +837,14 @@ class PostProcess(nn.Module):
         super(PostProcess, self).__init__()
         self.config = config
 
-    def forward(self, out,data):
+    def forward(self, out, data):
         post_out = dict()
         post_out["preds"] = [x[1:2].detach().cpu().numpy() for x in out["reg"]]
         post_out["gt_preds"] = [x[1:2].numpy() for x in data["gt_preds"]]
         post_out["has_preds"] = [x[1:2].numpy() for x in data["has_preds"]]
         return post_out
 
-    def append(self, metrics: Dict, loss_out: Dict, post_out: Optional[Dict[str, List[ndarray]]]=None) -> Dict:
+    def append(self, metrics: Dict, loss_out: Dict, post_out: Optional[Dict[str, List[ndarray]]] = None) -> Dict:
         if len(metrics.keys()) == 0:
             for key in loss_out:
                 if key != "loss":
@@ -884,7 +892,7 @@ class PostProcess(nn.Module):
 
 
 def pred_metrics(preds, gt_preds, has_preds):
-    # assert has_preds.all()
+    assert has_preds.all()
     preds = np.asarray(preds, np.float32)
     gt_preds = np.asarray(gt_preds, np.float32)
 
@@ -911,6 +919,5 @@ def get_model():
 
     params = net.parameters()
     opt = Optimizer(params, config)
-
 
     return config, ArgoDataset, collate_fn, net, loss, post_process, opt
