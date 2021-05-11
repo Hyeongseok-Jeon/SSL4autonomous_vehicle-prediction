@@ -89,7 +89,7 @@ def main():
         pin_memory=True,
     )
 
-    train_mod(config, train_loader)
+    # train_mod(config, train_loader)
     val_mod(config, val_loader)
 
 
