@@ -52,7 +52,7 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
 )
 parser.add_argument(
-    "--memo", default="_1mods"
+    "--memo", default="_6mods"
 )
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
