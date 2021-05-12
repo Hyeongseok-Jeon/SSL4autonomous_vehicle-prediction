@@ -131,21 +131,21 @@ class Net(nn.Module):
 
     def forward(self, data: Dict) -> Dict[str, List[Tensor]]:
         # construct actor feature
-        actors, actor_idcs = self.baseline.actor_gather(gpu(data["feats"]))
+        actors, actor_idcs = baseline.actor_gather(gpu(data["feats"]))
         actor_ctrs = gpu(data["ctrs"])
-        actors = self.actor_net(actors)
+        actors = actor_net(actors)
 
         # construct map features
-        graph = self.baseline.graph_gather(to_long(gpu(data["graph"])))
-        nodes, node_idcs, node_ctrs = self.map_net(graph)
+        graph = baseline.graph_gather(to_long(gpu(data["graph"])))
+        nodes, node_idcs, node_ctrs = map_net(graph)
 
         # actor-map fusion cycle
         nodes = a2m(nodes, graph, actors, actor_idcs, actor_ctrs)
         nodes = m2m(nodes, graph)
-        actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
-        actors = self.a2a(actors, actor_idcs, actor_ctrs)
+        actors = m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
+        actors = a2a(actors, actor_idcs, actor_ctrs)
 
-        action_emb(actors, actor_idcs, data).shape
+        actors = action_emb(actors, actor_idcs, data).shape
         # prediction
         out = self.pred_net(actors, actor_idcs, actor_ctrs)
         rot, orig = gpu(data["rot"]), gpu(data["orig"])
