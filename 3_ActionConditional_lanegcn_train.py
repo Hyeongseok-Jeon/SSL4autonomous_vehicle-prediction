@@ -52,7 +52,7 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
 )
 parser.add_argument(
-    "--memo", default="_1mods"
+    "--memo", default="_6mods"
 )
 parser.add_argument(
     "--encoder", default="encoder_1"
@@ -107,7 +107,7 @@ def main():
         return
 
     # Create log and copy all code
-    save_dir = config["save_dir"] + args.memo
+    save_dir = config["save_dir"] + args.memo + '_' + args.encoder
     log = os.path.join(save_dir, "log")
     if hvd.rank() == 0:
         if not os.path.exists(save_dir):
@@ -152,7 +152,7 @@ def main():
         #             shutil.copy(os.path.join(results_dirs+'/'+dir, f), os.path.join(dst_dir, f))
 
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=False)
+    dataset = Dataset(config["train_split"], config, train=True)
     train_sampler = DistributedSampler(
         dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )
@@ -227,7 +227,7 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
         if hvd.rank() == 0 and (
             num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
-            save_ckpt(net, opt, config["save_dir"] + args.memo, epoch)
+            save_ckpt(net, opt, config["save_dir"] + args.memo + '_' + args.encoder, epoch)
 
         if num_iters % display_iters == 0:
             dt = time.time() - start_time
