@@ -118,34 +118,41 @@ class Net(nn.Module):
         self.config = config
         self.baseline = baseline
         self.encoder = encoder
-        self.actor_net = baseline.ActorNet(config).cuda()
-        self.map_net = baseline.MapNet(config).cuda()
+        self.actor_net = baseline.ActorNet(config)
+        self.map_net = baseline.MapNet(config)
 
-        self.a2m = baseline.A2M(config).cuda()
-        self.m2m = baseline.M2M(config).cuda()
-        self.m2a = baseline.M2A(config).cuda()
-        self.a2a = baseline.A2A(config).cuda()
+        self.a2m = baseline.A2M(config)
+        self.m2m = baseline.M2M(config)
+        self.m2a = baseline.M2A(config)
+        self.a2a = baseline.A2A(config)
 
-        self.action_emb = encoder.encoder(config).cuda()
+        self.action_emb = encoder.encoder(config)
         self.pred_net = PredNet(config)
 
     def forward(self, data: Dict) -> Dict[str, List[Tensor]]:
         # construct actor feature
-        actors, actor_idcs = baseline.actor_gather(gpu(data["feats"]))
+        actors, actor_idcs = self.baseline.actor_gather(gpu(data["feats"]))
         actor_ctrs = gpu(data["ctrs"])
-        actors = actor_net(actors)
+        actors = self.actor_net(actors)
 
         # construct map features
-        graph = baseline.graph_gather(to_long(gpu(data["graph"])))
-        nodes, node_idcs, node_ctrs = map_net(graph)
+        graph = self.baseline.graph_gather(to_long(gpu(data["graph"])))
+        nodes, node_idcs, node_ctrs = self.map_net(graph)
 
         # actor-map fusion cycle
-        nodes = a2m(nodes, graph, actors, actor_idcs, actor_ctrs)
-        nodes = m2m(nodes, graph)
-        actors = m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
-        actors = a2a(actors, actor_idcs, actor_ctrs)
+        nodes = self.a2m(nodes, graph, actors, actor_idcs, actor_ctrs)
+        nodes = self.m2m(nodes, graph)
+        actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
+        actors = self.a2a(actors, actor_idcs, actor_ctrs)
 
-        actors = action_emb(actors, actor_idcs, data).shape
+        actors = self.action_emb(actors, actor_idcs, data)
+        actor_ctrs = [actor_ctrs[i][1:2] for i in range(len(actor_ctrs))]
+        actor_idcs = []
+        count = 0
+        for i in range(len(actor_ctrs)):
+            idcs = torch.arange(count, count + 1).to(actors.device)
+            actor_idcs.append(idcs)
+            count += 1
         # prediction
         out = self.pred_net(actors, actor_idcs, actor_ctrs)
         rot, orig = gpu(data["rot"]), gpu(data["orig"])
