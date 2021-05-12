@@ -54,6 +54,9 @@ parser.add_argument(
 parser.add_argument(
     "--memo", default="_6mods"
 )
+parser.add_argument(
+    "--encoder", default="encoder_1"
+)
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
 args = parser.parse_args()
@@ -67,7 +70,7 @@ def main():
     random.seed(seed)
 
     # Import all settings for experiment.
-    config, Dataset, collate_fn, net, loss, post_process, opt = model.get_model()
+    config, Dataset, collate_fn, net, loss, post_process, opt = model.get_model(args)
 
     if config["horovod"]:
         opt.opt = hvd.DistributedOptimizer(
@@ -149,7 +152,7 @@ def main():
         #             shutil.copy(os.path.join(results_dirs+'/'+dir, f), os.path.join(dst_dir, f))
 
     # Data loader for training
-    dataset = Dataset(config["train_split"], config, train=True)
+    dataset = Dataset(config["train_split"], config, train=False)
     train_sampler = DistributedSampler(
         dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )

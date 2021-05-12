@@ -50,8 +50,8 @@ if "save_dir" not in config:
 if not os.path.isabs(config["save_dir"]):
     config["save_dir"] = os.path.join(root_path, "results", config["save_dir"])
 
-config["batch_size"] = 64
-config["val_batch_size"] = 64
+config["batch_size"] = 32
+config["val_batch_size"] = 32
 config["workers"] = 0
 config["val_workers"] = config["workers"]
 
@@ -113,18 +113,20 @@ class Net(nn.Module):
         4. PredNet: prediction header for motion forecasting using
            feature from A2A
     """
-    def __init__(self, config, baseline):
+    def __init__(self, config, baseline, encoder):
         super(Net, self).__init__()
         self.config = config
         self.baseline = baseline
-        self.actor_net = self.baseline.ActorNet(config)
-        self.map_net = self.baseline.MapNet(config)
+        self.encoder = encoder
+        self.actor_net = baseline.ActorNet(config)
+        self.map_net = baseline.MapNet(config)
 
-        self.a2m = self.baseline.A2M(config)
-        self.m2m = self.baseline.M2M(config)
-        self.m2a = self.baseline.M2A(config)
-        self.a2a = self.baseline.A2A(config)
+        self.a2m = baseline.A2M(config)
+        self.m2m = baseline.M2M(config)
+        self.m2a = baseline.M2A(config)
+        self.a2a = baseline.A2A(config)
 
+        self.action_emb = encoder.encoder(config)
         self.pred_net = PredNet(config)
 
     def forward(self, data: Dict) -> Dict[str, List[Tensor]]:
@@ -143,6 +145,14 @@ class Net(nn.Module):
         actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
         actors = self.a2a(actors, actor_idcs, actor_ctrs)
 
+        actors = self.action_emb(actors, actor_idcs, data)
+        actor_ctrs = [actor_ctrs[i][1:2] for i in range(len(actor_ctrs))]
+        actor_idcs = []
+        count = 0
+        for i in range(len(actor_ctrs)):
+            idcs = torch.arange(count, count + 1).to(actors.device)
+            actor_idcs.append(idcs)
+            count += 1
         # prediction
         out = self.pred_net(actors, actor_idcs, actor_ctrs)
         rot, orig = gpu(data["rot"]), gpu(data["orig"])
@@ -316,7 +326,8 @@ class Loss(nn.Module):
         self.pred_loss = PredLoss(config)
 
     def forward(self, out: Dict, data: Dict) -> Dict:
-        loss_out = self.pred_loss(out, gpu(data["gt_preds"]), gpu(data["has_preds"]))
+        batch_num = len(data['city'])
+        loss_out = self.pred_loss(out, [gpu(data["gt_preds"])[i][1:2] for i in range(batch_num)], [gpu(data["has_preds"])[i][1:2] for i in range(batch_num)])
         loss_out["loss"] = loss_out["cls_loss"] / (
             loss_out["num_cls"] + 1e-10
         ) + loss_out["reg_loss"] / (loss_out["num_reg"] + 1e-10)
@@ -330,7 +341,7 @@ class PostProcess(nn.Module):
 
     def forward(self, out,data):
         post_out = dict()
-        post_out["preds"] = [x[1:2].detach().cpu().numpy() for x in out["reg"]]
+        post_out["preds"] = [x[0:1].detach().cpu().numpy() for x in out["reg"]]
         post_out["gt_preds"] = [x[1:2].numpy() for x in data["gt_preds"]]
         post_out["has_preds"] = [x[1:2].numpy() for x in data["has_preds"]]
         return post_out
@@ -401,9 +412,10 @@ def pred_metrics(preds, gt_preds, has_preds):
     return ade1, fde1, ade, fde, min_idcs
 
 
-def get_model():
+def get_model(args):
+    encoder = import_module('ActionEncoders.' + args.encoder)
     baseline = import_module('LaneGCN.lanegcn')
-    net = Net(config, baseline)
+    net = Net(config, baseline, encoder)
     net = net.cuda()
 
     loss = Loss(config).cuda()
