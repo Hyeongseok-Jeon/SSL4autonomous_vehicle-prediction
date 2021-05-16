@@ -3,7 +3,7 @@
 # limitations under the License.
 
 import os
-CUDA_VISIBLE_DEVICES=1,2
+CUDA_VISIBLE_DEVICES="1,2,3"
 os.umask(0)
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
