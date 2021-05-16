@@ -22,13 +22,11 @@ import torch
 from torch.utils.data import Sampler, DataLoader
 import horovod.torch as hvd
 
-
 from torch.utils.data.distributed import DistributedSampler
 
 from LaneGCN.utils import Logger, load_pretrain
 
 from mpi4py import MPI
-
 
 comm = MPI.COMM_WORLD
 hvd.init()
@@ -38,7 +36,6 @@ torch.cuda.set_device(hvd.local_rank())
 root_path = os.getcwd()
 
 sys.path.insert(0, root_path)
-
 
 parser = argparse.ArgumentParser(description="Fuse Detection in Pytorch")
 parser.add_argument(
@@ -61,6 +58,7 @@ parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
 args = parser.parse_args()
 model = import_module(args.model)
+
 
 def main():
     seed = hvd.rank()
@@ -225,7 +223,7 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
 
     start_time = time.time()
     metrics = dict()
-    for i, data in tqdm(enumerate(train_loader),disable=hvd.rank()):
+    for i, data in tqdm(enumerate(train_loader), disable=hvd.rank()):
         epoch += epoch_per_batch
         data = dict(data)
 
@@ -239,8 +237,8 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
         lr = opt.step(epoch)
 
         num_iters = int(np.round(epoch * num_batches))
-        if hvd.rank() == 0 and epoch>=10 and (
-            num_iters % save_iters == 0 or epoch >= config["num_epochs"]
+        if hvd.rank() == 0 and epoch >= 10 and (
+                num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
             save_ckpt(net, opt, config["save_dir"] + args.memo + '_' + args.encoder, epoch)
 
