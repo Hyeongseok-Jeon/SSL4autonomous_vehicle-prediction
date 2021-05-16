@@ -118,16 +118,16 @@ class Net(nn.Module):
         self.config = config
         self.baseline = baseline
         self.encoder = encoder
-        self.actor_net = baseline.ActorNet(config)
-        self.map_net = baseline.MapNet(config)
+        self.actor_net = baseline.ActorNet(config).cuda()
+        self.map_net = baseline.MapNet(config).cuda()
 
-        self.a2m = baseline.A2M(config)
-        self.m2m = baseline.M2M(config)
-        self.m2a = baseline.M2A(config)
-        self.a2a = baseline.A2A(config)
+        self.a2m = baseline.A2M(config).cuda()
+        self.m2m = baseline.M2M(config).cuda()
+        self.m2a = baseline.M2A(config).cuda()
+        self.a2a = baseline.A2A(config).cuda()
 
-        self.action_emb = encoder.encoder(config)
-        self.pred_net = PredNet(config)
+        self.action_emb = encoder.encoder(config).cuda()
+        self.pred_net = PredNet(config).cuda()
 
     def forward(self, data: Dict) -> Dict[str, List[Tensor]]:
         # construct actor feature
@@ -144,8 +144,12 @@ class Net(nn.Module):
         nodes = self.m2m(nodes, graph)
         actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
         actors = self.a2a(actors, actor_idcs, actor_ctrs)
+        target_idx = torch.cat([x[1].unsqueeze(dim=0) for x in actor_idcs])
+        target_actors = actors[target_idx]
 
-        actors = self.action_emb(actors, actor_idcs, data)
+        target_action = self.action_emb(actors, actor_idcs, data)
+
+        actors = target_actors + target_action
         actor_ctrs = [actor_ctrs[i][1:2] for i in range(len(actor_ctrs))]
         actor_idcs = []
         count = 0

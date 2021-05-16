@@ -106,14 +106,14 @@ class encoder(nn.Module):
     def __init__(self, config):
         super(encoder, self).__init__()
         self.config = config
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.LeakyReLU(inplace=True)
 
         self.action_emb = TCN(input_size=102,
                               output_size=config_action_emb["output_size"],
                               num_channels=config_action_emb["num_channels"],
                               kernel_size=config_action_emb["kernel_size"],
-                              dropout=config_action_emb["dropout"]).cuda()
-        self.out = nn.Linear(config_action_emb["output_size"] * 2, config_action_emb["n_hid"])
+                              dropout=config_action_emb["dropout"])
+        self.out = nn.Linear(config_action_emb["output_size"], config_action_emb["n_hid"])
 
     def forward(self, actors, actor_idcs, data):
         batch_num = len(data['city'])
@@ -122,8 +122,7 @@ class encoder(nn.Module):
         target_idx = torch.cat([x[1].unsqueeze(dim=0) for x in actor_idcs])
         actors_target = actors[target_idx]
         hid_act = self.action_emb(action_original)[:, -1, :]
-        sample = torch.cat([hid_act, actors_target], dim=1)
 
-        out = self.out(sample)
+        out = self.out(hid_act)
         action_conditional_hid = self.relu(out)
         return action_conditional_hid

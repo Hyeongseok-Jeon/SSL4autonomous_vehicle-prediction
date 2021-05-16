@@ -52,7 +52,7 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
 )
 parser.add_argument(
-    "--memo", default="_6mods"
+    "--memo", default="_6mods_add_actors_and_action"
 )
 parser.add_argument(
     "--encoder", default="encoder_1"
