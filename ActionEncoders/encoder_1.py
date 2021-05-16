@@ -126,4 +126,4 @@ class encoder(nn.Module):
 
         out = self.out(sample)
         action_conditional_hid = self.relu(out)
-        return action_conditional_hid
+        return action_conditional_hid, torch.norm(actors_target), torch.norm(hid_act)

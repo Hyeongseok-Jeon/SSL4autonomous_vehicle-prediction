@@ -49,7 +49,7 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
 )
 parser.add_argument(
-    "--memo", default="_6mods_transfer"
+    "--memo", default="_6mods_mag_regulation"
 )
 parser.add_argument(
     "--encoder", default="encoder_1"
@@ -229,6 +229,8 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
 
         output = net(data)
         loss_out = loss(output, data)
+        loss_out['mag_dif'] = 0.05 * torch.abs(output['target_mag'] - output['action_mag'])
+        loss_out['loss'] = loss_out['loss'] + loss_out['mag_dif']
         post_out = post_process(output, data)
         post_process.append(metrics, loss_out, post_out)
 
@@ -268,6 +270,8 @@ def val(config, data_loader, net, loss, post_process, epoch):
         with torch.no_grad():
             output = net(data)
             loss_out = loss(output, data)
+            loss_out['mag_dif'] = 0.05 * torch.abs(output['target_mag'] - output['action_mag'])
+            loss_out['loss'] = loss_out['loss'] + loss_out['mag_dif']
             post_out = post_process(output, data)
             post_process.append(metrics, loss_out, post_out)
 
