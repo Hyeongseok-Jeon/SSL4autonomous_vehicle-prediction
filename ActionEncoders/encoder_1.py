@@ -41,19 +41,19 @@ class TemporalBlock(nn.Module):
         self.conv1 = weight_norm(nn.Conv1d(n_inputs, n_outputs, kernel_size,
                                            stride=stride, padding=padding, dilation=dilation))
         self.chomp1 = Chomp1d(padding)
-        self.relu1 = nn.ReLU()
+        self.tanh1 = nn.Tanh()
         self.dropout1 = nn.Dropout(dropout)
 
         self.conv2 = weight_norm(nn.Conv1d(n_outputs, n_outputs, kernel_size,
                                            stride=stride, padding=padding, dilation=dilation))
         self.chomp2 = Chomp1d(padding)
-        self.relu2 = nn.ReLU()
+        self.tanh2 = nn.Tanh()
         self.dropout2 = nn.Dropout(dropout)
 
-        self.net = nn.Sequential(self.conv1, self.chomp1, self.relu1, self.dropout1,
-                                 self.conv2, self.chomp2, self.relu2, self.dropout2)
+        self.net = nn.Sequential(self.conv1, self.chomp1, self.tanh1, self.dropout1,
+                                 self.conv2, self.chomp2, self.tanh2, self.dropout2)
         self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
-        self.relu = nn.ReLU()
+        self.tanh = nn.Tanh()
         self.init_weights()
 
     def init_weights(self):
@@ -65,7 +65,8 @@ class TemporalBlock(nn.Module):
     def forward(self, x):
         out = self.net(x)
         res = x if self.downsample is None else self.downsample(x)
-        return self.relu(out + res)
+
+        return self.tanh(out + res)
 
 
 class TemporalConvNet(nn.Module):
@@ -91,13 +92,14 @@ class TCN(nn.Module):
         super(TCN, self).__init__()
         self.tcn = TemporalConvNet(input_size, num_channels, kernel_size, dropout=dropout)
         self.linear = nn.Linear(num_channels[-1], output_size)
-        self.sig = nn.Sigmoid()
+        self.tanh = nn.Tanh()
 
     def forward(self, x):
         # x needs to have dimension (N, C, L) in order to be passed into CNN
         output = self.tcn(x.transpose(1, 2)).transpose(1, 2)
         output = self.linear(output)
-        return self.sig(output)
+
+        return self.tanh(output)
 
 
 class encoder(nn.Module):
@@ -122,5 +124,6 @@ class encoder(nn.Module):
         hid_act = self.action_emb(action_original)[:, -1, :]
         sample = torch.cat([hid_act, actors_target], dim=1)
 
-        action_conditional_hid = self.relu(self.out(sample))
+        out = self.out(sample)
+        action_conditional_hid = self.relu(out)
         return action_conditional_hid
