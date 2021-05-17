@@ -49,7 +49,7 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
 )
 parser.add_argument(
-    "--memo", default="_6mods_mag_regulation"
+    "--memo", default="_6mods_mag_regulation_wo_tcn_output_layer_encoder_1"
 )
 parser.add_argument(
     "--encoder", default="encoder_1"
