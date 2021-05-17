@@ -7,6 +7,7 @@ import sys
 
 sys.path.extend(['/home/jhs/Desktop/SSL4autonomous_vehicle-prediction/LaneGCN'])
 sys.path.extend(['/home/user/data/HyeongseokJeon/SSL4autonomous_vehicle-prediction/LaneGCN'])
+sys.path.extend(['/home/ubuntu/VDC/HyeongseokJeon/SSL4autonomous_vehicle-prediction/LaneGCN'])
 
 import torch.nn as nn
 from torch.nn.utils import weight_norm
@@ -113,7 +114,7 @@ class encoder(nn.Module):
                               num_channels=config_action_emb["num_channels"],
                               kernel_size=config_action_emb["kernel_size"],
                               dropout=config_action_emb["dropout"])
-        self.out = nn.Linear(config_action_emb["output_size"], config_action_emb["n_hid"])
+        self.out = nn.Linear(config_action_emb["output_size"] * 2, config_action_emb["n_hid"])
 
     def forward(self, actors, actor_idcs, data):
         batch_num = len(data['city'])
@@ -122,7 +123,8 @@ class encoder(nn.Module):
         target_idx = torch.cat([x[1].unsqueeze(dim=0) for x in actor_idcs])
         actors_target = actors[target_idx]
         hid_act = self.action_emb(action_original)[:, -1, :]
+        sample = torch.cat([hid_act, actors_target], dim=1)
 
-        out = self.out(hid_act)
+        out = self.out(sample)
         action_conditional_hid = self.relu(out)
         return action_conditional_hid

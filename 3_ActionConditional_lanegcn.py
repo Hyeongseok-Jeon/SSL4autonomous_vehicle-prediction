@@ -6,6 +6,7 @@ import numpy as np
 import os
 import sys
 sys.path.extend(['/home/jhs/Desktop/SSL4autonomous_vehicle-prediction/LaneGCN'])
+sys.path.extend(['/home/ubuntu/VDC/HyeongseokJeon/SSL4autonomous_vehicle-prediction/LaneGCN'])
 sys.path.extend(['/home/user/data/HyeongseokJeon/SSL4autonomous_vehicle-prediction/LaneGCN'])
 from fractions import gcd
 from numbers import Number
@@ -144,12 +145,8 @@ class Net(nn.Module):
         nodes = self.m2m(nodes, graph)
         actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
         actors = self.a2a(actors, actor_idcs, actor_ctrs)
-        target_idx = torch.cat([x[1].unsqueeze(dim=0) for x in actor_idcs])
-        target_actors = actors[target_idx]
 
-        target_action = self.action_emb(actors, actor_idcs, data)
-
-        actors = target_actors + target_action
+        actors = self.action_emb(actors, actor_idcs, data)
         actor_ctrs = [actor_ctrs[i][1:2] for i in range(len(actor_ctrs))]
         actor_idcs = []
         count = 0
@@ -419,8 +416,16 @@ def pred_metrics(preds, gt_preds, has_preds):
 def get_model(args):
     encoder = import_module('ActionEncoders.' + args.encoder)
     baseline = import_module('LaneGCN.lanegcn')
+
     net = Net(config, baseline, encoder)
     net = net.cuda()
+
+    pre_trained_weight = torch.load(root_path + "/LaneGCN/pre_trained" + '/36.000.ckpt')
+    pretrained_dict = pre_trained_weight['state_dict']
+    new_model_dict = net.state_dict()
+    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in new_model_dict}
+    new_model_dict.update(pretrained_dict)
+    net.load_state_dict(new_model_dict)
 
     loss = Loss(config).cuda()
     post_process = PostProcess(config).cuda()
