@@ -144,8 +144,12 @@ class Net(nn.Module):
         nodes = self.m2m(nodes, graph)
         actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
         actors = self.a2a(actors, actor_idcs, actor_ctrs)
+        target_idx = torch.cat([x[1].unsqueeze(dim=0) for x in actor_idcs])
+        target_actors = actors[target_idx]
 
-        actors, target_mag, action_mag = self.action_emb(actors, actor_idcs, data)
+        target_action = self.action_emb(actors, actor_idcs, data)
+
+        actors = target_actors + target_action
         actor_ctrs = [actor_ctrs[i][1:2] for i in range(len(actor_ctrs))]
         actor_idcs = []
         count = 0
@@ -155,8 +159,6 @@ class Net(nn.Module):
             count += 1
         # prediction
         out = self.pred_net(actors, actor_idcs, actor_ctrs)
-        out['target_mag'] = target_mag
-        out['action_mag'] = action_mag
         rot, orig = gpu(data["rot"]), gpu(data["orig"])
         # transform prediction to world coordinates
         for i in range(len(out["reg"])):
@@ -353,7 +355,7 @@ class PostProcess(nn.Module):
             for key in loss_out:
                 if key != "loss":
                     metrics[key] = 0.0
-            metrics['mag_num'] = 0.0
+
             for key in post_out:
                 metrics[key] = []
 
@@ -367,8 +369,6 @@ class PostProcess(nn.Module):
 
         for key in post_out:
             metrics[key] += post_out[key]
-        metrics['mag_num'] += 1
-
         return metrics
 
     def display(self, metrics, dt, epoch, lr=None):
@@ -383,8 +383,7 @@ class PostProcess(nn.Module):
 
         cls = metrics["cls_loss"] / (metrics["num_cls"] + 1e-10)
         reg = metrics["reg_loss"] / (metrics["num_reg"] + 1e-10)
-        mag = metrics["mag_dif"] / (metrics["mag_num"] + 1e-10)
-        loss = cls + reg + mag
+        loss = cls + reg
 
         preds = np.concatenate(metrics["preds"], 0)
         gt_preds = np.concatenate(metrics["gt_preds"], 0)
@@ -392,8 +391,8 @@ class PostProcess(nn.Module):
         ade1, fde1, ade, fde, min_idcs = pred_metrics(preds, gt_preds, has_preds)
 
         print(
-            "loss %2.4f %2.4f %2.4f %2.4f, ade1 %2.4f, fde1 %2.4f, ade %2.4f, fde %2.4f"
-            % (loss, cls, reg, mag, ade1, fde1, ade, fde)
+            "loss %2.4f %2.4f %2.4f, ade1 %2.4f, fde1 %2.4f, ade %2.4f, fde %2.4f"
+            % (loss, cls, reg, ade1, fde1, ade, fde)
         )
         print()
 
@@ -420,7 +419,6 @@ def pred_metrics(preds, gt_preds, has_preds):
 def get_model(args):
     encoder = import_module('ActionEncoders.' + args.encoder)
     baseline = import_module('LaneGCN.lanegcn')
-
     net = Net(config, baseline, encoder)
     net = net.cuda()
 

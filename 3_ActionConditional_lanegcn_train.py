@@ -3,7 +3,7 @@
 # limitations under the License.
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="2, 3"
+os.environ["CUDA_VISIBLE_DEVICES"]="0, 1"
 os.umask(0)
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -49,7 +49,7 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
 )
 parser.add_argument(
-    "--memo", default="_6mods_mag_regulation_wo_tcn_output_layer_encoder_1"
+    "--memo", default="_6mods_add_actors_and_action_wo_tcn_output_layer"
 )
 parser.add_argument(
     "--encoder", default="encoder_1"
@@ -229,8 +229,6 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
 
         output = net(data)
         loss_out = loss(output, data)
-        loss_out['mag_dif'] = 0.05 * torch.abs(output['target_mag'] - output['action_mag'])
-        loss_out['loss'] = loss_out['loss'] + loss_out['mag_dif']
         post_out = post_process(output, data)
         post_process.append(metrics, loss_out, post_out)
 
@@ -239,7 +237,7 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
         lr = opt.step(epoch)
 
         num_iters = int(np.round(epoch * num_batches))
-        if hvd.rank() == 0 and (
+        if hvd.rank() == 0 and epoch >= 10 and (
                 num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
             save_ckpt(net, opt, config["save_dir"] + args.memo + '_' + args.encoder, epoch)
@@ -270,8 +268,6 @@ def val(config, data_loader, net, loss, post_process, epoch):
         with torch.no_grad():
             output = net(data)
             loss_out = loss(output, data)
-            loss_out['mag_dif'] = 0.05 * torch.abs(output['target_mag'] - output['action_mag'])
-            loss_out['loss'] = loss_out['loss'] + loss_out['mag_dif']
             post_out = post_process(output, data)
             post_process.append(metrics, loss_out, post_out)
 
