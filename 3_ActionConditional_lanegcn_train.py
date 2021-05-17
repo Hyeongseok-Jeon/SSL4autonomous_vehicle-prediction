@@ -239,7 +239,7 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
         lr = opt.step(epoch)
 
         num_iters = int(np.round(epoch * num_batches))
-        if hvd.rank() == 0 and epoch >= 10 and (
+        if hvd.rank() == 0 and (
                 num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
             save_ckpt(net, opt, config["save_dir"] + args.memo + '_' + args.encoder, epoch)
