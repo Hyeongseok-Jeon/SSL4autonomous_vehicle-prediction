@@ -3,7 +3,7 @@
 # limitations under the License.
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="0, 1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 os.umask(0)
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -308,3 +308,6 @@ def sync(data):
 
 if __name__ == "__main__":
     main()
+
+# TODO: 미래 경로에 대한 정보를 path candidate가 아닌 미래 예측 결과 값과의 상대 state로 넣어서 임베딩 진행
+# TODO: 단순 transfer를 nipa서버에서 실행
