@@ -49,7 +49,7 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
 )
 parser.add_argument(
-    "--memo", default="_6mods_transfer_wo_tcn_output_layer"
+    "--memo", default="_6mods_transfer_wo_tcn_output_layer_weigh_regularization"
 )
 parser.add_argument(
     "--encoder", default="encoder_1"
@@ -171,7 +171,7 @@ def main():
     )
     train_loader = DataLoader(
         dataset,
-        batch_size=config["batch_size"],
+        batch_size=4,
         num_workers=config["workers"],
         sampler=train_sampler,
         collate_fn=collate_fn,
@@ -229,6 +229,9 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
 
         output = net(data)
         loss_out = loss(output, data)
+        loss_out['weight_norm'] = 0.05 * torch.abs(torch.norm(net.action_emb.out.state_dict()['weight'][:,:128]) - torch.norm(net.action_emb.out.state_dict()['weight'][:,128:]))
+        loss_out['loss'] = loss_out['loss'] + loss_out['weight_norm']
+
         post_out = post_process(output, data)
         post_process.append(metrics, loss_out, post_out)
 
@@ -268,6 +271,8 @@ def val(config, data_loader, net, loss, post_process, epoch):
         with torch.no_grad():
             output = net(data)
             loss_out = loss(output, data)
+            loss_out['weight_norm'] = 0.05 * torch.abs(torch.norm(net.action_emb.out.state_dict()['weight'][:, :128]) - torch.norm(net.action_emb.out.state_dict()['weight'][:, 128:]))
+            loss_out['loss'] = loss_out['loss'] + loss_out['weight_norm']
             post_out = post_process(output, data)
             post_process.append(metrics, loss_out, post_out)
 

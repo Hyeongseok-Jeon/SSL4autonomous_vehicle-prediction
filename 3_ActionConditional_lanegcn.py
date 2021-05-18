@@ -352,7 +352,7 @@ class PostProcess(nn.Module):
             for key in loss_out:
                 if key != "loss":
                     metrics[key] = 0.0
-
+            metrics['weight_norm_num'] = 0.0
             for key in post_out:
                 metrics[key] = []
 
@@ -366,6 +366,8 @@ class PostProcess(nn.Module):
 
         for key in post_out:
             metrics[key] += post_out[key]
+        metrics['weight_norm_num'] += 1
+
         return metrics
 
     def display(self, metrics, dt, epoch, lr=None):
@@ -380,7 +382,9 @@ class PostProcess(nn.Module):
 
         cls = metrics["cls_loss"] / (metrics["num_cls"] + 1e-10)
         reg = metrics["reg_loss"] / (metrics["num_reg"] + 1e-10)
-        loss = cls + reg
+        weight = metrics["weight_norm"] / (metrics["weight_norm_num"] + 1e-10)
+
+        loss = cls + reg + weight
 
         preds = np.concatenate(metrics["preds"], 0)
         gt_preds = np.concatenate(metrics["gt_preds"], 0)
@@ -388,8 +392,8 @@ class PostProcess(nn.Module):
         ade1, fde1, ade, fde, min_idcs = pred_metrics(preds, gt_preds, has_preds)
 
         print(
-            "loss %2.4f %2.4f %2.4f, ade1 %2.4f, fde1 %2.4f, ade %2.4f, fde %2.4f"
-            % (loss, cls, reg, ade1, fde1, ade, fde)
+            "loss %2.4f %2.4f %2.4f %2.4f, ade1 %2.4f, fde1 %2.4f, ade %2.4f, fde %2.4f"
+            % (loss, cls, reg, weight, ade1, fde1, ade, fde)
         )
         print()
 
