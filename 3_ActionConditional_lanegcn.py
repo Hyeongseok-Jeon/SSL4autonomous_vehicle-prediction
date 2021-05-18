@@ -129,6 +129,7 @@ class Net(nn.Module):
 
         self.action_emb = encoder.encoder(config).cuda()
         self.pred_net = PredNet(config).cuda()
+        self.pred_net_second = PredNet(config).cuda()
 
     def forward(self, data: Dict) -> Dict[str, List[Tensor]]:
         # construct actor feature
@@ -146,7 +147,8 @@ class Net(nn.Module):
         actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
         actors = self.a2a(actors, actor_idcs, actor_ctrs)
 
-        actors = self.action_emb(actors, actor_idcs, data)
+        target_idx = torch.cat([x[1].unsqueeze(dim=0) for x in actor_idcs])
+        actors = actors[target_idx]
         actor_ctrs = [actor_ctrs[i][1:2] for i in range(len(actor_ctrs))]
         actor_idcs = []
         count = 0
@@ -162,7 +164,15 @@ class Net(nn.Module):
             out["reg"][i] = torch.matmul(out["reg"][i], rot[i]) + orig[i].view(
                 1, 1, 1, -1
             )
-        return out
+
+        conditional_actors = self.action_emb(actors, data, out)
+        out_final = self.pred_net_second(conditional_actors, actor_idcs, actor_ctrs)
+        # transform prediction to world coordinates
+        for i in range(len(out_final["reg"])):
+            out_final["reg"][i] = torch.matmul(out_final["reg"][i], rot[i]) + orig[i].view(
+                1, 1, 1, -1
+            )
+        return out_final
 
 
 class PredNet(nn.Module):
@@ -352,7 +362,6 @@ class PostProcess(nn.Module):
             for key in loss_out:
                 if key != "loss":
                     metrics[key] = 0.0
-            metrics['weight_norm_num'] = 0.0
             for key in post_out:
                 metrics[key] = []
 
@@ -366,7 +375,6 @@ class PostProcess(nn.Module):
 
         for key in post_out:
             metrics[key] += post_out[key]
-        metrics['weight_norm_num'] += 1
 
         return metrics
 
@@ -382,9 +390,8 @@ class PostProcess(nn.Module):
 
         cls = metrics["cls_loss"] / (metrics["num_cls"] + 1e-10)
         reg = metrics["reg_loss"] / (metrics["num_reg"] + 1e-10)
-        weight = metrics["weight_norm"] / (metrics["weight_norm_num"] + 1e-10)
 
-        loss = cls + reg + weight
+        loss = cls + reg
 
         preds = np.concatenate(metrics["preds"], 0)
         gt_preds = np.concatenate(metrics["gt_preds"], 0)
@@ -392,8 +399,8 @@ class PostProcess(nn.Module):
         ade1, fde1, ade, fde, min_idcs = pred_metrics(preds, gt_preds, has_preds)
 
         print(
-            "loss %2.4f %2.4f %2.4f %2.4f, ade1 %2.4f, fde1 %2.4f, ade %2.4f, fde %2.4f"
-            % (loss, cls, reg, weight, ade1, fde1, ade, fde)
+            "loss %2.4f %2.4f %2.4f, ade1 %2.4f, fde1 %2.4f, ade %2.4f, fde %2.4f"
+            % (loss, cls, reg, ade1, fde1, ade, fde)
         )
         print()
 
