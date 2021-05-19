@@ -430,18 +430,24 @@ def get_model(args):
 
     net = Net(config, baseline, encoder)
     net = net.cuda()
-    #
-    # pre_trained_weight = torch.load(root_path + "/LaneGCN/pre_trained" + '/36.000.ckpt')
-    # pretrained_dict = pre_trained_weight['state_dict']
-    # new_model_dict = net.state_dict()
-    # pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in new_model_dict}
-    # new_model_dict.update(pretrained_dict)
-    # net.load_state_dict(new_model_dict)
+
+    pre_trained_weight = torch.load(root_path + "/LaneGCN/pre_trained" + '/36.000.ckpt')
+    pretrained_dict = pre_trained_weight['state_dict']
+    new_model_dict = net.state_dict()
+    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in new_model_dict}
+    new_model_dict.update(pretrained_dict)
+    net.load_state_dict(new_model_dict)
+
+    params_pred = [(name, param) for name, param in net.action_emb.named_parameters()]
+    params_back = [(name, param) for name, param in net.pred_net_second.named_parameters()]
+    params_back = [p for n, p in params_back]
+    params_pred = [p for n, p in params_pred]
+
+    params = params_back + params_pred
 
     loss = Loss(config).cuda()
     post_process = PostProcess(config).cuda()
 
-    params = net.parameters()
     opt = Optimizer(params, config)
 
 

@@ -3,7 +3,7 @@
 # limitations under the License.
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="0, 1"
+os.environ["CUDA_VISIBLE_DEVICES"]="2, 3"
 os.umask(0)
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -46,10 +46,10 @@ parser.add_argument(
     "--resume", default="", type=str, metavar="RESUME", help="checkpoint path"
 )
 parser.add_argument(
-    "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
+    "--weight", default="", type=str, metavar="WEIGHT", help="chesckpoint path"
 )
 parser.add_argument(
-    "--memo", default="_6mods_leakyrelu_activation"
+    "--memo", default="_6mods_transfer_and_freeze_leakyrelu_activation"
 )
 parser.add_argument(
     "--encoder", default="encoder_2"
