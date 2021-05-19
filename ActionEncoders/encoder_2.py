@@ -131,6 +131,6 @@ class encoder(nn.Module):
         action_original = ego_aug - init_pred_reg
         hid_act = self.relu(self.action_emb(action_original)[:, -1, :])
 
-        conditional_actors = actors + hid_act
+        conditional_actors = hid_act
 
         return conditional_actors

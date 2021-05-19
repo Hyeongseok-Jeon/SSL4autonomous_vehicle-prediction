@@ -118,8 +118,8 @@ class encoder(nn.Module):
         self.out = nn.Linear(config_action_emb["output_size"] * 2, config_action_emb["n_hid"])
 
     def forward(self, actors, data, init_pred):
-        batch_num = len(data['city'])
-        ego_aug = torch.cat([gpu(data['gt_preds'][i][0:1]) for i in range(batch_num)])
+        batch_num = len(cur_data['city'])
+        ego_aug = torch.cat([gpu(cur_data['gt_preds'][i][0:1]) for i in range(batch_num)])
         # ego_aug = torch.cat([gpu(data['ego_aug'][i]['traj'][0:1]) for i in range(batch_num)])
         # init_pred = out
 
@@ -129,7 +129,7 @@ class encoder(nn.Module):
         else:
             init_pred_reg = torch.cat([init_pred['reg'][i][:, 0, :, :] for i in range(batch_num)])
         action_original = ego_aug - init_pred_reg
-        hid_act = self.relu(self.action_emb(action_original)[:, -1, :])
+        hid_act = net.action_emb.relu(net.action_emb.action_emb(action_original)[:, -1, :])
 
         conditional_actors = actors + hid_act
 

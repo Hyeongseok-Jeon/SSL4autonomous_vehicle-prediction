@@ -106,6 +106,7 @@ def main():
 
     # Create log and copy all code
     save_dir = config["save_dir"] + args.memo + '_' + args.encoder
+    print(save_dir)
     log = os.path.join(save_dir, "log")
     if hvd.rank() == 0:
         if not os.path.exists(save_dir):
@@ -311,6 +312,6 @@ if __name__ == "__main__":
     main()
 
 
-# TODO: transfer 안한상태로 leakyrelu encoder
-# TODO: transfer 및 freeze한 상태로 leakyrelu encoder
-# TODO: action에 대한 pred를 따로 training하고 최종 output만 합쳐서 진행
+# TODO: simple head and mod1 으로 진행 > leaky relu activation으로
+# TODO: action hid seperated 다시 진행: done
+# TODO: hidden norm regularization

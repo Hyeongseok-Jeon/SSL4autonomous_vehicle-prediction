@@ -134,19 +134,19 @@ class Net(nn.Module):
     def forward(self, data: Dict) -> Dict[str, List[Tensor]]:
         with torch.no_grad():
             # construct actor feature
-            actors, actor_idcs = self.baseline.actor_gather(gpu(data["feats"]))
-            actor_ctrs = gpu(data["ctrs"])
-            actors = self.actor_net(actors)
+            actors, actor_idcs = net.baseline.actor_gather(gpu(cur_data["feats"]))
+            actor_ctrs = gpu(cur_data["ctrs"])
+            actors = net.actor_net(actors)
 
             # construct map features
-            graph = self.baseline.graph_gather(to_long(gpu(data["graph"])))
-            nodes, node_idcs, node_ctrs = self.map_net(graph)
+            graph = net.baseline.graph_gather(to_long(gpu(cur_data["graph"])))
+            nodes, node_idcs, node_ctrs = net.map_net(graph)
 
             # actor-map fusion cycle
-            nodes = self.a2m(nodes, graph, actors, actor_idcs, actor_ctrs)
-            nodes = self.m2m(nodes, graph)
-            actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
-            actors = self.a2a(actors, actor_idcs, actor_ctrs)
+            nodes = net.a2m(nodes, graph, actors, actor_idcs, actor_ctrs)
+            nodes = net.m2m(nodes, graph)
+            actors = net.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
+            actors = net.a2a(actors, actor_idcs, actor_ctrs)
 
             target_idx = torch.cat([x[1].unsqueeze(dim=0) for x in actor_idcs])
             actors = actors[target_idx]
@@ -158,16 +158,16 @@ class Net(nn.Module):
                 actor_idcs.append(idcs)
                 count += 1
             # prediction
-            out = self.pred_net(actors, actor_idcs, actor_ctrs)
-            rot, orig = gpu(data["rot"]), gpu(data["orig"])
+            out = net.pred_net(actors, actor_idcs, actor_ctrs)
+            rot, orig = gpu(cur_data["rot"]), gpu(cur_data["orig"])
             # transform prediction to world coordinates
             for i in range(len(out["reg"])):
                 out["reg"][i] = torch.matmul(out["reg"][i], rot[i]) + orig[i].view(
                     1, 1, 1, -1
                 )
 
-        conditional_actors = self.action_emb(actors, data, out)
-        out_final = self.pred_net_second(conditional_actors, actor_idcs, actor_ctrs)
+        conditional_actors = net.action_emb(actors, cur_data, out)
+        out_final = net.pred_net_second(conditional_actors, actor_idcs, actor_ctrs)
         # transform prediction to world coordinates
         for i in range(len(out_final["reg"])):
             out_final["reg"][i] = torch.matmul(out_final["reg"][i], rot[i]) + orig[i].view(
