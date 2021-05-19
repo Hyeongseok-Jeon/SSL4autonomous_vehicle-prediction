@@ -132,47 +132,46 @@ class Net(nn.Module):
         self.pred_net_second = PredNet(config).cuda()
 
     def forward(self, data: Dict) -> Dict[str, List[Tensor]]:
-        with torch.no_grad():
-            # construct actor feature
-            actors, actor_idcs = self.baseline.actor_gather(gpu(data["feats"]))
-            actor_ctrs = gpu(data["ctrs"])
-            actors = self.actor_net(actors)
+        # construct actor feature
+        actors, actor_idcs = self.baseline.actor_gather(gpu(data["feats"]))
+        actor_ctrs = gpu(data["ctrs"])
+        actors = self.actor_net(actors)
 
-            # construct map features
-            graph = self.baseline.graph_gather(to_long(gpu(data["graph"])))
-            nodes, node_idcs, node_ctrs = self.map_net(graph)
+        # construct map features
+        graph = self.baseline.graph_gather(to_long(gpu(data["graph"])))
+        nodes, node_idcs, node_ctrs = self.map_net(graph)
 
-            # actor-map fusion cycle
-            nodes = self.a2m(nodes, graph, actors, actor_idcs, actor_ctrs)
-            nodes = self.m2m(nodes, graph)
-            actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
-            actors = self.a2a(actors, actor_idcs, actor_ctrs)
+        # actor-map fusion cycle
+        nodes = self.a2m(nodes, graph, actors, actor_idcs, actor_ctrs)
+        nodes = self.m2m(nodes, graph)
+        actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
+        actors = self.a2a(actors, actor_idcs, actor_ctrs)
 
-            target_idx = torch.cat([x[1].unsqueeze(dim=0) for x in actor_idcs])
-            actors = actors[target_idx]
-            actor_ctrs = [actor_ctrs[i][1:2] for i in range(len(actor_ctrs))]
-            actor_idcs = []
-            count = 0
-            for i in range(len(actor_ctrs)):
-                idcs = torch.arange(count, count + 1).to(actors.device)
-                actor_idcs.append(idcs)
-                count += 1
-            # prediction
-            out = self.pred_net(actors, actor_idcs, actor_ctrs)
-            rot, orig = gpu(data["rot"]), gpu(data["orig"])
-            # transform prediction to world coordinates
-            for i in range(len(out["reg"])):
-                out["reg"][i] = torch.matmul(out["reg"][i], rot[i]) + orig[i].view(
-                    1, 1, 1, -1
-                )
-
-        conditional_actors = self.action_emb(actors, data, out)
-        out_final = self.pred_net_second(conditional_actors, actor_idcs, actor_ctrs)
+        target_idx = torch.cat([x[1].unsqueeze(dim=0) for x in actor_idcs])
+        actors = actors[target_idx]
+        actor_ctrs = [actor_ctrs[i][1:2] for i in range(len(actor_ctrs))]
+        actor_idcs = []
+        count = 0
+        for i in range(len(actor_ctrs)):
+            idcs = torch.arange(count, count + 1).to(actors.device)
+            actor_idcs.append(idcs)
+            count += 1
+        # prediction
+        out = self.pred_net(actors, actor_idcs, actor_ctrs)
+        rot, orig = gpu(data["rot"]), gpu(data["orig"])
         # transform prediction to world coordinates
-        for i in range(len(out_final["reg"])):
-            out_final["reg"][i] = torch.matmul(out_final["reg"][i], rot[i]) + orig[i].view(
+        for i in range(len(out["reg"])):
+            out["reg"][i] = torch.matmul(out["reg"][i], rot[i]) + orig[i].view(
                 1, 1, 1, -1
             )
+
+        conditional_actors = self.action_emb(actors, data, out)
+        out_react = self.pred_net_second(conditional_actors, actor_idcs, actor_ctrs)
+        # transform prediction to world coordinates
+
+        out_final = dict()
+        out_final['cls'] = out['cls']
+        out_final['reg'] = [out['reg'][i] + out_react['reg'][i] for i in range(len(out['reg']))]
         return out_final
 
 
@@ -431,24 +430,18 @@ def get_model(args):
 
     net = Net(config, baseline, encoder)
     net = net.cuda()
-
-    pre_trained_weight = torch.load(root_path + "/LaneGCN/pre_trained" + '/36.000.ckpt')
-    pretrained_dict = pre_trained_weight['state_dict']
-    new_model_dict = net.state_dict()
-    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in new_model_dict}
-    new_model_dict.update(pretrained_dict)
-    net.load_state_dict(new_model_dict)
-
-    params_pred = [(name, param) for name, param in net.action_emb.named_parameters()]
-    params_back = [(name, param) for name, param in net.pred_net_second.named_parameters()]
-    params_back = [p for n, p in params_back]
-    params_pred = [p for n, p in params_pred]
-
-    params = params_back + params_pred
+    #
+    # pre_trained_weight = torch.load(root_path + "/LaneGCN/pre_trained" + '/36.000.ckpt')
+    # pretrained_dict = pre_trained_weight['state_dict']
+    # new_model_dict = net.state_dict()
+    # pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in new_model_dict}
+    # new_model_dict.update(pretrained_dict)
+    # net.load_state_dict(new_model_dict)
 
     loss = Loss(config).cuda()
     post_process = PostProcess(config).cuda()
 
+    params = net.parameters()
     opt = Optimizer(params, config)
 
 
