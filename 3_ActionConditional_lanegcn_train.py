@@ -3,7 +3,7 @@
 # limitations under the License.
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="2, 3"
+os.environ["CUDA_VISIBLE_DEVICES"]="0, 1"
 os.umask(0)
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -49,7 +49,7 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
 )
 parser.add_argument(
-    "--memo", default="_6mods_transfer_wo_tcn_output_layer"
+    "--memo", default="_6mods_transfer_leakyrelu_activation"
 )
 parser.add_argument(
     "--encoder", default="encoder_2"
@@ -238,7 +238,7 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
         lr = opt.step(epoch)
 
         num_iters = int(np.round(epoch * num_batches))
-        if hvd.rank() == 0 and epoch >= 10 and (
+        if hvd.rank() == 0 and epoch >= 0 and (
                 num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
             save_ckpt(net, opt, config["save_dir"] + args.memo + '_' + args.encoder, epoch)

@@ -43,19 +43,19 @@ class TemporalBlock(nn.Module):
         self.conv1 = weight_norm(nn.Conv1d(n_inputs, n_outputs, kernel_size,
                                            stride=stride, padding=padding, dilation=dilation))
         self.chomp1 = Chomp1d(padding)
-        self.tanh1 = nn.Tanh()
+        self.relu1 = nn.LeakyReLU()
         self.dropout1 = nn.Dropout(dropout)
 
         self.conv2 = weight_norm(nn.Conv1d(n_outputs, n_outputs, kernel_size,
                                            stride=stride, padding=padding, dilation=dilation))
         self.chomp2 = Chomp1d(padding)
-        self.tanh2 = nn.Tanh()
+        self.relu2 = nn.LeakyReLU()
         self.dropout2 = nn.Dropout(dropout)
 
-        self.net = nn.Sequential(self.conv1, self.chomp1, self.tanh1, self.dropout1,
-                                 self.conv2, self.chomp2, self.tanh2, self.dropout2)
+        self.net = nn.Sequential(self.conv1, self.chomp1, self.relu1, self.dropout1,
+                                 self.conv2, self.chomp2, self.relu2, self.dropout2)
         self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
-        self.tanh = nn.Tanh()
+        self.relu = nn.LeakyReLU()
         self.init_weights()
 
     def init_weights(self):
@@ -66,9 +66,9 @@ class TemporalBlock(nn.Module):
 
     def forward(self, x):
         out = self.net(x)
-        res = x if self.downsample is None else self.downsample(x)
+        # res = x if self.downsample is None else self.downsample(x)
 
-        return self.tanh(out + res)
+        return out
 
 
 class TemporalConvNet(nn.Module):
@@ -94,21 +94,21 @@ class TCN(nn.Module):
         super(TCN, self).__init__()
         self.tcn = TemporalConvNet(input_size, num_channels, kernel_size, dropout=dropout)
         self.linear = nn.Linear(num_channels[-1], output_size)
-        self.tanh = nn.Tanh()
+        self.relu = nn.LeakyReLU()
 
     def forward(self, x):
         # x needs to have dimension (N, C, L) in order to be passed into CNN
         output = self.tcn(x.transpose(1, 2)).transpose(1, 2)
         # output = self.linear(output)
 
-        return self.tanh(output)
+        return output
 
 
 class encoder(nn.Module):
     def __init__(self, config):
         super(encoder, self).__init__()
         self.config = config
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.LeakyReLU(inplace=True)
 
         self.action_emb = TCN(input_size=2,
                               output_size=config_action_emb["output_size"],
@@ -129,7 +129,7 @@ class encoder(nn.Module):
         else:
             init_pred_reg = torch.cat([init_pred['reg'][i][:, 0, :, :] for i in range(batch_num)])
         action_original = ego_aug - init_pred_reg
-        hid_act = self.action_emb(action_original)[:, -1, :]
+        hid_act = self.relu(self.action_emb(action_original)[:, -1, :])
 
         conditional_actors = actors + hid_act
 
