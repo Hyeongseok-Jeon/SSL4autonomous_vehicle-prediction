@@ -3,7 +3,7 @@
 # limitations under the License.
 
 import os
-
+os.environ["CUDA_VISIBLE_DEVICES"]="2, 3"
 os.umask(0)
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -22,13 +22,11 @@ import torch
 from torch.utils.data import Sampler, DataLoader
 import horovod.torch as hvd
 
-
 from torch.utils.data.distributed import DistributedSampler
 
 from LaneGCN.utils import Logger, load_pretrain
 
 from mpi4py import MPI
-
 
 comm = MPI.COMM_WORLD
 hvd.init()
@@ -39,25 +37,28 @@ root_path = os.getcwd()
 
 sys.path.insert(0, root_path)
 
-
 parser = argparse.ArgumentParser(description="Fuse Detection in Pytorch")
 parser.add_argument(
-    "-m", "--model", default="lanegcn_simple_head", type=str, metavar="MODEL", help="model name"
+    "-m", "--model", default="4_ActionConditional_lanegcn_simple_head", type=str, metavar="MODEL", help="model name"
 )
 parser.add_argument("--eval", action="store_true")
 parser.add_argument(
     "--resume", default="", type=str, metavar="RESUME", help="checkpoint path"
 )
 parser.add_argument(
-    "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
+    "--weight", default="", type=str, metavar="WEIGHT", help="chesckpoint path"
 )
 parser.add_argument(
-    "--memo", default="_6mods"
+    "--memo", default="_1mods_leakyrelu_activation_simple_head"
+)
+parser.add_argument(
+    "--encoder", default="encoder_2"
 )
 parser.add_argument("--mode", default='client')
 parser.add_argument("--port", default=52162)
 args = parser.parse_args()
 model = import_module(args.model)
+
 
 def main():
     seed = hvd.rank()
@@ -67,7 +68,7 @@ def main():
     random.seed(seed)
 
     # Import all settings for experiment.
-    config, Dataset, collate_fn, net, loss, post_process, opt = model.get_model()
+    config, Dataset, collate_fn, net, loss, post_process, opt = model.get_model(args)
 
     if config["horovod"]:
         opt.opt = hvd.DistributedOptimizer(
@@ -104,7 +105,8 @@ def main():
         return
 
     # Create log and copy all code
-    save_dir = config["save_dir"] + args.memo
+    save_dir = config["save_dir"] + args.memo + '_' + args.encoder
+    print(save_dir)
     log = os.path.join(save_dir, "log")
     if hvd.rank() == 0:
         if not os.path.exists(save_dir):
@@ -136,6 +138,21 @@ def main():
                         shutil.rmtree(os.path.join(dst_dir, f))
                         shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
 
+        src_dirs = [os.path.join(root_path, 'ActionEncoders')]
+        dst_dirs = [os.path.join(save_dir, "files", 'ActionEncoders')]
+        for src_dir, dst_dir in zip(src_dirs, dst_dirs):
+            files = [f for f in os.listdir(src_dir) if f.endswith(".py") or f.startswith("pre_trained")]
+            if not os.path.exists(dst_dir):
+                os.makedirs(dst_dir)
+            for f in files:
+                if os.path.isfile(os.path.join(src_dir, f)):
+                    shutil.copy(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+                if os.path.isdir(os.path.join(src_dir, f)):
+                    try:
+                        shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
+                    except:
+                        shutil.rmtree(os.path.join(dst_dir, f))
+                        shutil.copytree(os.path.join(src_dir, f), os.path.join(dst_dir, f))
         #
         # results_dirs = os.path.join(root_path, 'results')
         # dir_list = os.listdir(results_dirs)
@@ -155,7 +172,7 @@ def main():
     )
     train_loader = DataLoader(
         dataset,
-        batch_size=config["batch_size"],
+        batch_size=config['batch_size'],
         num_workers=config["workers"],
         sampler=train_sampler,
         collate_fn=collate_fn,
@@ -207,12 +224,13 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
 
     start_time = time.time()
     metrics = dict()
-    for i, data in tqdm(enumerate(train_loader),disable=hvd.rank()):
+    for i, data in tqdm(enumerate(train_loader), disable=hvd.rank()):
         epoch += epoch_per_batch
         data = dict(data)
 
         output = net(data)
         loss_out = loss(output, data)
+
         post_out = post_process(output, data)
         post_process.append(metrics, loss_out, post_out)
 
@@ -221,10 +239,10 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
         lr = opt.step(epoch)
 
         num_iters = int(np.round(epoch * num_batches))
-        if hvd.rank() == 0 and (
-            num_iters % save_iters == 0 or epoch >= config["num_epochs"]
+        if hvd.rank() == 0 and epoch >= 0 and (
+                num_iters % save_iters == 0 or epoch >= config["num_epochs"]
         ):
-            save_ckpt(net, opt, config["save_dir"], epoch)
+            save_ckpt(net, opt, config["save_dir"] + args.memo + '_' + args.encoder, epoch)
 
         if num_iters % display_iters == 0:
             dt = time.time() - start_time
@@ -292,3 +310,8 @@ def sync(data):
 
 if __name__ == "__main__":
     main()
+
+
+# TODO: simple head and mod1 으로 진행 > leaky relu activation으로
+# TODO: action hid seperated 다시 진행: done
+# TODO: hidden norm regularization

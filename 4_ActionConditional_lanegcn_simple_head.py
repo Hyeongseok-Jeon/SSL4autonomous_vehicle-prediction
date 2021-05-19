@@ -6,6 +6,7 @@ import numpy as np
 import os
 import sys
 sys.path.extend(['/home/jhs/Desktop/SSL4autonomous_vehicle-prediction/LaneGCN'])
+sys.path.extend(['/home/ubuntu/VDC/HyeongseokJeon/SSL4autonomous_vehicle-prediction/LaneGCN'])
 sys.path.extend(['/home/user/data/HyeongseokJeon/SSL4autonomous_vehicle-prediction/LaneGCN'])
 from fractions import gcd
 from numbers import Number
@@ -36,7 +37,7 @@ config["save_freq"] = 1.0
 config["epoch"] = 0
 config["horovod"] = True
 config["opt"] = "adam"
-config["num_epochs"] = 36
+config["num_epochs"] = 50
 config["lr"] = [1e-3, 1e-4]
 config["lr_epochs"] = [32]
 config["lr_func"] = StepLR(config["lr"], config["lr_epochs"])
@@ -86,7 +87,7 @@ config["actor2actor_dist"] = 100.0
 config["pred_size"] = 30
 config["pred_step"] = 1
 config["num_preds"] = config["pred_size"] // config["pred_step"]
-config["num_mods"] = 6
+config["num_mods"] = 1
 config["cls_coef"] = 1.0
 config["reg_coef"] = 1.0
 config["mgn"] = 0.2
@@ -113,19 +114,22 @@ class Net(nn.Module):
         4. PredNet: prediction header for motion forecasting using
            feature from A2A
     """
-    def __init__(self, config, baseline):
+    def __init__(self, config, baseline, encoder):
         super(Net, self).__init__()
         self.config = config
         self.baseline = baseline
-        self.actor_net = self.baseline.ActorNet(config)
-        self.map_net = self.baseline.MapNet(config)
+        self.encoder = encoder
+        self.actor_net = baseline.ActorNet(config).cuda()
+        self.map_net = baseline.MapNet(config).cuda()
 
-        self.a2m = self.baseline.A2M(config)
-        self.m2m = self.baseline.M2M(config)
-        self.m2a = self.baseline.M2A(config)
-        self.a2a = self.baseline.A2A(config)
+        self.a2m = baseline.A2M(config).cuda()
+        self.m2m = baseline.M2M(config).cuda()
+        self.m2a = baseline.M2A(config).cuda()
+        self.a2a = baseline.A2A(config).cuda()
 
-        self.pred_net = PredNet(config)
+        self.action_emb = encoder.encoder(config).cuda()
+        self.pred_net = PredNet(config).cuda()
+        self.pred_net_second = PredNet(config).cuda()
 
     def forward(self, data: Dict) -> Dict[str, List[Tensor]]:
         # construct actor feature
@@ -143,6 +147,15 @@ class Net(nn.Module):
         actors = self.m2a(actors, actor_idcs, actor_ctrs, nodes, node_idcs, node_ctrs)
         actors = self.a2a(actors, actor_idcs, actor_ctrs)
 
+        target_idx = torch.cat([x[1].unsqueeze(dim=0) for x in actor_idcs])
+        actors = actors[target_idx]
+        actor_ctrs = [actor_ctrs[i][1:2] for i in range(len(actor_ctrs))]
+        actor_idcs = []
+        count = 0
+        for i in range(len(actor_ctrs)):
+            idcs = torch.arange(count, count + 1).to(actors.device)
+            actor_idcs.append(idcs)
+            count += 1
         # prediction
         out = self.pred_net(actors, actor_idcs, actor_ctrs)
         rot, orig = gpu(data["rot"]), gpu(data["orig"])
@@ -151,7 +164,15 @@ class Net(nn.Module):
             out["reg"][i] = torch.matmul(out["reg"][i], rot[i]) + orig[i].view(
                 1, 1, 1, -1
             )
-        return out
+
+        conditional_actors = self.action_emb(actors, data, out)
+        out_react = self.pred_net_second(conditional_actors, actor_idcs, actor_ctrs)
+        # transform prediction to world coordinates
+
+        out_final = dict()
+        out_final['cls'] = out['cls']
+        out_final['reg'] = [out['reg'][i] + out_react['reg'][i] for i in range(len(out['reg']))]
+        return out_final
 
 
 class PredNet(nn.Module):
@@ -401,10 +422,19 @@ def pred_metrics(preds, gt_preds, has_preds):
     return ade1, fde1, ade, fde, min_idcs
 
 
-def get_model():
+def get_model(args):
+    encoder = import_module('ActionEncoders.' + args.encoder)
     baseline = import_module('LaneGCN.lanegcn')
-    net = Net(config, baseline)
+
+    net = Net(config, baseline, encoder)
     net = net.cuda()
+    #
+    # pre_trained_weight = torch.load(root_path + "/LaneGCN/pre_trained" + '/36.000.ckpt')
+    # pretrained_dict = pre_trained_weight['state_dict']
+    # new_model_dict = net.state_dict()
+    # pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in new_model_dict}
+    # new_model_dict.update(pretrained_dict)
+    # net.load_state_dict(new_model_dict)
 
     loss = Loss(config).cuda()
     post_process = PostProcess(config).cuda()
