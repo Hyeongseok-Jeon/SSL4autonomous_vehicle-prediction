@@ -49,7 +49,7 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="checkpoint path"
 )
 parser.add_argument(
-    "--memo", default="_6mods_transfer_leakyrelu_activation"
+    "--memo", default="_6mods_leakyrelu_activation"
 )
 parser.add_argument(
     "--encoder", default="encoder_2"
@@ -310,5 +310,7 @@ def sync(data):
 if __name__ == "__main__":
     main()
 
-# TODO: 미래 경로에 대한 정보를 path candidate가 아닌 미래 예측 결과 값과의 상대 state로 넣어서 임베딩 진행
-# TODO: 단순 transfer를 nipa서버에서 실행
+
+# TODO: transfer 안한상태로 leakyrelu encoder
+# TODO: transfer 및 freeze한 상태로 leakyrelu encoder
+# TODO: action에 대한 pred를 따로 training하고 최종 output만 합쳐서 진행
