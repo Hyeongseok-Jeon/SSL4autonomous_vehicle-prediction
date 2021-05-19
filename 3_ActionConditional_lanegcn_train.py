@@ -3,7 +3,7 @@
 # limitations under the License.
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="2, 3"
+os.environ["CUDA_VISIBLE_DEVICES"]="0, 1"
 os.umask(0)
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -49,7 +49,7 @@ parser.add_argument(
     "--weight", default="", type=str, metavar="WEIGHT", help="chesckpoint path"
 )
 parser.add_argument(
-    "--memo", default="_1mods_leakyrelu_activation_simple_head"
+    "--memo", default="_6mods_action_hid_seperated_leakyrelu_activation_hidden_norm_regularization"
 )
 parser.add_argument(
     "--encoder", default="encoder_2"
@@ -230,6 +230,8 @@ def train(epoch, config, train_loader, net, loss, post_process, opt, val_loader=
 
         output = net(data)
         loss_out = loss(output, data)
+        loss_out['norm_diff'] = torch.abs(output['actor_norm'] - output['conditional_actors_norm'])
+        loss_out['loss'] = loss_out['loss'] + loss_out['norm_diff']
 
         post_out = post_process(output, data)
         post_process.append(metrics, loss_out, post_out)
@@ -312,6 +314,6 @@ if __name__ == "__main__":
     main()
 
 
-# TODO: simple head and mod1 으로 진행 > leaky relu activation으로
+# TODO: simple head and mod1 으로 진행 > leaky relu activation으로 :done
 # TODO: action hid seperated 다시 진행: done
 # TODO: hidden norm regularization
