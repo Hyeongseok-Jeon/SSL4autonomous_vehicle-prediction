@@ -43,19 +43,19 @@ class TemporalBlock(nn.Module):
         self.conv1 = weight_norm(nn.Conv1d(n_inputs, n_outputs, kernel_size,
                                            stride=stride, padding=padding, dilation=dilation))
         self.chomp1 = Chomp1d(padding)
-        self.relu1 = nn.LeakyReLU()
+        self.relu1 = nn.ReLU()
         self.dropout1 = nn.Dropout(dropout)
 
         self.conv2 = weight_norm(nn.Conv1d(n_outputs, n_outputs, kernel_size,
                                            stride=stride, padding=padding, dilation=dilation))
         self.chomp2 = Chomp1d(padding)
-        self.relu2 = nn.LeakyReLU()
+        self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout(dropout)
 
         self.net = nn.Sequential(self.conv1, self.chomp1, self.relu1, self.dropout1,
                                  self.conv2, self.chomp2, self.relu2, self.dropout2)
         self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
-        self.relu = nn.LeakyReLU()
+        self.relu = nn.ReLU()
         self.init_weights()
 
     def init_weights(self):
@@ -94,7 +94,7 @@ class TCN(nn.Module):
         super(TCN, self).__init__()
         self.tcn = TemporalConvNet(input_size, num_channels, kernel_size, dropout=dropout)
         self.linear = nn.Linear(num_channels[-1], output_size)
-        self.relu = nn.LeakyReLU()
+        self.relu = nn.ReLU()
 
     def forward(self, x):
         # x needs to have dimension (N, C, L) in order to be passed into CNN
@@ -108,7 +108,7 @@ class encoder(nn.Module):
     def __init__(self, config):
         super(encoder, self).__init__()
         self.config = config
-        self.relu = nn.LeakyReLU(inplace=True)
+        self.relu = nn.ReLU(inplace=True)
 
         self.action_emb = TCN(input_size=2,
                               output_size=config_action_emb["output_size"],
